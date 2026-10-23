@@ -1,0 +1,7 @@
+node_modules/
+.next/
+.env
+data/*.db
+data/*.db-journal
+tsconfig.tsbuildinfo
+next-env.d.ts

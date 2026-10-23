@@ -1,0 +1,4 @@
+# پایان خط اسکریپت‌های شل باید LF باشد — CRLF (پیش‌فرض checkout ویندوزی با
+# core.autocrlf=true) داخل کانتینر لینوکسی shebang را می‌شکند
+# (exec entrypoint.sh: no such file or directory).
+*.sh text eol=lf

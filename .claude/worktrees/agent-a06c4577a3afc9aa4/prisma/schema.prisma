@@ -1,0 +1,525 @@
+datasource db {
+  provider = "sqlite"
+  // Relative to this file → data/app.db at the project root, outside public/.
+  // Hardcoded on purpose: CLI, seed script, and the Next runtime all resolve
+  // the same file with zero .env setup on a fresh clone.
+  url      = "file:../data/app.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  /// Full display name, e.g. 'سارا محمدی' — one field, as entered by the customer.
+  name      String
+  /// Null for customers who sign up with a phone number only.
+  email     String?  @unique
+  /// Iranian mobile number, e.g. '09121234567' — the customer's username.
+  phone     String?  @unique
+  /// 'admin' | 'member' | 'customer' — checked by lib/api-auth.ts before any write.
+  role      String   @default("member")
+  salt      String
+  /// PBKDF2-SHA256(password, salt) as lowercase hex — see lib/users.ts.
+  passwordHash String
+  /// SHA-256 hex of the password-reset code, salted with the user salt —
+  /// never the code itself. Null when no reset is in flight.
+  resetCodeHash      String?
+  resetCodeExpiresAt DateTime?
+  /// 'password' | 'twostep' | 'otp' — the user's own sign-in method (profile
+  /// setting). The admin's site-wide policy (AppSettings.loginPolicy) can
+  /// force 'twostep'/'otp' for everyone, overriding this value.
+  loginMethod        String   @default("password")
+  /// While a two-step/OTP login is pending: SHA-256 of the 6-digit code,
+  /// salted with the user salt. Null when nothing is pending.
+  loginCodeHash      String?
+  /// SHA-256 of the pending login ticket — the opaque handle the OTP step
+  /// presents instead of re-sending credentials. Null when nothing is pending.
+  loginTicketHash    String?
+  loginCodeExpiresAt DateTime?
+  /// National ID code (کد ملی) — matched against the mobile number via the
+  /// Shahkar service at signup, when the admin enabled it (تنظیمات → شاهکار).
+  nationalId         String?
+  /// True when the admin blocked the account (مشتریان → مسدود کردن): sign-in
+  /// is refused until it is lifted. Staff accounts are managed from /users.
+  isBlocked          Boolean  @default(false)
+  /// Wallet balance in Toman — online payments land here first, orders are
+  /// then paid from it. Mirrors the WalletTransaction ledger.
+  walletBalance Int      @default(0)
+  /// Saved delivery addresses — chosen from during checkout.
+  addresses Address[]
+  walletTransactions          WalletTransaction[]
+  onlinePaymentTransactions   OnlinePaymentTransaction[]
+  /// Coupons assigned specifically to this customer (null on Coupon = public).
+  coupons Coupon[]
+  /// Single-use-per-customer record of burned coupons.
+  couponRedemptions CouponRedemption[]
+  /// Support conversations opened by this account (guest tickets have none).
+  supportTickets SupportTicket[]
+  createdAt DateTime @default(now())
+}
+
+/// A saved delivery address of a customer, managed from the checkout flow.
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Short label, e.g. 'خانه' or 'محل کار'.
+  title     String
+  /// Who receives the parcel at this address.
+  receiverName  String
+  receiverPhone String
+  /// Full address text (city, street, number, unit…).
+  body      String
+  postalCode String?
+  createdAt DateTime @default(now())
+}
+
+/// Key-value store for admin-editable panel settings (payment/SMS keys…).
+model AppConfig {
+  key   String @id
+  value String
+}
+
+/// Admin-defined role (نقش). The machine name is what User.role stores; a
+/// role with isAdmin = true signs in with full admin access, everything else
+/// is staff (member-level). The three built-ins — admin, member, customer —
+/// are referenced by code and can be retitled but not deleted.
+model Role {
+  id String @id @default(cuid())
+  /// Machine name stored on User.role — lowercase latin/digits/dash.
+  name String @unique
+  /// Persian display title shown in the admin UI.
+  title String
+  /// Full admin access when true; otherwise staff-level like 'member'.
+  isAdmin Boolean @default(false)
+  /// JSON array of permission entries (lib/nav-permissions.ts): a bare href
+  /// grants view, `href:edit` / `href:add` grant the write actions.
+  /// Ignored for isAdmin roles — they see everything.
+  permissions String @default("[]")
+  createdAt DateTime @default(now())
+}
+
+/// Site-wide storefront settings (name, contact, about us, logo, favicon,
+/// enamad/رسانه badges) — a table of its own, deliberately separate from
+/// AppConfig, so the whole site-settings block can be split into an
+/// independent module later. Keys are the former `site_*` appConfig keys.
+model SiteSetting {
+  key   String @id
+  value String
+}
+
+/// Saved customization of one storefront theme — palette + section toggles,
+/// stored as a validated JSON string. One row per theme; the row with
+/// active = true is the live skin (enforced single-active by lib code).
+model ThemeConfig {
+  /// 'beautyshop' | 'digimarket' | 'digishop' | 'softkala'
+  themeId String @id
+  /// JSON of { colors, sections } — validated by lib/theme-settings.ts.
+  config  String
+  active  Boolean @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+/// Injectable third-party snippet ("meta code") — Google Analytics, Tag
+/// Manager, Search Console verification… Content is validated per kind in
+/// lib/meta-tags.ts (IDs and allowlisted tags only — no arbitrary scripts),
+/// so a malicious payload can never be stored or rendered.
+model MetaTag {
+  id String @id @default(cuid())
+  /// Slot kind — see META_TAG_KINDS in lib/meta-tags.ts:
+  /// 'ga4' | 'gtm' | 'gsc' | 'clarity' | 'custom'
+  kind    String
+  /// Admin-facing label shown in the settings list.
+  title   String
+  /// The validated snippet/identifier, rendered into <head>.
+  content String
+  isActive Boolean @default(true)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Admin-defined product group or category, e.g. 'موبایل' → 'گوشی ساده'.
+/// A root row (parent = null) is a group; children are its categories.
+model Category {
+  id     String   @id @default(cuid())
+  name   String
+  slug   String   @unique
+  /// Parent category — null = top-level group.
+  parentId String?
+  parent   Category?   @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[]  @relation("CategoryTree")
+  sortOrder Int     @default(0)
+  /// Coupons restricted to this category's products.
+  coupons Coupon[]
+  products ProductCategory[]
+  /// JSON string of { themeId: [sectionId, …] } — which storefront sections
+  /// (of the ACTIVE theme) this group/category is pinned to. Empty = show
+  /// everywhere (SQLite has no native Json column).
+  placements String @default("{}")
+  createdAt DateTime @default(now())
+}
+
+/// Product ↔ category assignment (a product can live in several categories).
+model ProductCategory {
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  /// URL-safe unique identifier, derived from the (Persian) name.
+  slug      String   @unique
+  /// Base price in Toman, before the discount below.
+  price     Int
+  /// Discount percent off the price (0–90), applied to the product and its
+  /// variants alike. 0 = no discount.
+  discountPercent Int @default(0)
+  qty       Int      @default(0)
+  isVisible Boolean  @default(true)
+  /// JSON string of [{ key, value }] — SQLite has no native Json column.
+  props     String   @default("[]")
+  /// JSON string of { themeId: [sectionId, …] } — which storefront sections
+  /// (of the ACTIVE theme) this product is pinned to; its categories' pins
+  /// add to this. Empty = show everywhere.
+  placements String @default("{}")
+  variants  ProductVariant[]
+  images    ProductImage[]
+  categories ProductCategory[]
+  /// Batch price updates that touched this product — see PriceChange.
+  priceChanges PriceChange[]
+  /// Coupons restricted to this product only.
+  coupons   Coupon[]
+  /// Coupons whose eligibility requires having purchased this product.
+  purchasedProductCoupons Coupon[] @relation("CouponPurchasedProduct")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  sku       String?
+  /// Null means "inherits the product price".
+  price     Int?
+  qty       Int      @default(0)
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Path relative to data/ — e.g. 'uploads/ab12cd.jpg'. Served by /api/files.
+  path      String
+  sortOrder Int     @default(0)
+}
+
+model Order {
+  id        String @id @default(cuid())
+  /// Human-facing ID kept for the monospace column, e.g. 'ORD-72411'.
+  displayId String @unique
+  customer  String
+  /** Pre-formatted Jalali date string — pure string work, hydration-safe. */
+  date      String
+  amount    Int
+  /** 'paid' | 'pending' | 'boxing' | 'posted' | 'shipped' | 'delivered' | 'cancelled' */
+  status    String
+  /// Category label used by the dashboard category chart.
+  category  String
+  /// List-price total (qty × pre-discount price) at order time — the
+  /// accounting page's "original price". 0 = legacy row placed before this
+  /// column existed (fall back to amount).
+  baseAmount Int @default(0)
+  /** Jalali month label, e.g. 'اسفند' — groups the revenue chart series. */
+  month     String
+  /// Customer account that placed the order — null for seeded demo rows.
+  userId    String?
+  /// JSON of ordered line items: [{ productId, variantId, name, qty, unitPrice }]
+  itemsJson String @default("[]")
+  /// 'tipax' — set when the customer starts checkout.
+  deliveryMethod String?
+  /// Address snapshot at checkout time (title, receiver, phone, body, postal code).
+  deliveryAddress String?
+  /// Gateway authority (ZarinPal) of the in-flight/last payment for this order.
+  paymentAuthority String? @unique
+  /// Gateway reference number after a successful verify.
+  paymentRefId String?
+  /// Coupon code applied at checkout (if any).
+  couponCode String?
+  /// Toman knocked off by the applied coupon — the payable amount is
+  /// amount − discountAmount + shippingCost.
+  discountAmount Int @default(0)
+  /// Shipping cost added to the payable amount at checkout — 0 for
+  /// pay-on-delivery (پس‌کرایه) methods, whose cost is settled at handover
+  /// instead of on the invoice.
+  shippingCost Int @default(0)
+  /// Courier tracking code entered by the admin when posting the order.
+  trackingCode String?
+  /// Delivery date the admin promised the customer when posting the order.
+  estimatedArrival DateTime?
+  /// When the shipping-notice SMS was last sent to the customer.
+  notifiedAt  DateTime?
+  /// When the online payment was verified.
+  paidAt    DateTime?
+  /// Random capability token for the shareable payment-link page (/pay/{token})
+  /// — null until the customer shares the order's payment link.
+  paymentToken String? @unique
+  createdAt DateTime @default(now())
+}
+
+/// One gateway/SMS failure worth showing on the admin logs page: what we
+/// called, which provider failed, and the error the target API returned.
+/// One table, two jobs. Failure rows ('gateway' | 'sms' | 'shahkar') record what
+/// a third-party API answered when a payment or SMS went wrong. Audit rows
+/// ('user' | 'price' | 'order') record who on the staff changed what — role
+/// permissions, accounts, prices, order statuses. They share the shape because
+/// the admin reads them in one list, filtered by kind.
+model SystemLog {
+  id String @id @default(cuid())
+  /// 'gateway' | 'sms' | 'shahkar' | 'user' | 'price' | 'order'
+  kind String
+  /// Provider name: gateway id (zarinpal, sadad…), SMS panel id (mediana…),
+  /// 'shahkar' — or '' on audit rows, which have no external provider.
+  provider String @default("")
+  /// What we were doing: 'start' | 'verify' | 'factor' | 'notice' |
+  /// 'payment_link' | 'match' — or the audit verb: 'create' | 'update' |
+  /// 'delete' | 'permissions' | 'role' | 'price' | 'status' | 'block'.
+  action String
+  /// Persian one-liner shown in the table.
+  message String
+  /// Raw response/error from the target API (truncated) — the "why" — or, on
+  /// audit rows, the changed fields as Persian "before / after" lines.
+  detail String @default("")
+  /// Display name of the staff member behind an audit row; '' for failures.
+  actor String @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Ledger of every wallet movement. The balance lives on User; these rows are
+/// the audit trail behind it.
+model WalletTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 'charge' (online top-up) | 'order_payment' | 'refund' | 'admin_adjust'
+  type      String
+  /// Signed Toman amount: positive credits the wallet, negative debits it.
+  amount    Int
+  /// Free-text context: gateway ref id, admin's reason, cancelled-order note…
+  reason    String?
+  /// The order this movement paid for / was refunded for.
+  orderId   String?
+  createdAt DateTime @default(now())
+}
+
+/// History of every payment attempt — charging the wallet or paying an order —
+/// with its state, per the requirement that attempts are recorded, not just
+/// successes.
+model OnlinePaymentTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 'wallet_charge' | 'order_payment'
+  kind      String
+  /// Toman the attempt is for.
+  amount    Int
+  /// 'pending' | 'verified' | 'failed'
+  state     String   @default("pending")
+  /// Which gateway the attempt went through: 'zarinpal' (also the default for
+  /// pre-existing rows) | 'digipay' | 'snapppay' | 'tara'.
+  gateway   String   @default("zarinpal")
+  /// ZarinPal authority of the in-flight gateway payment (null for instant
+  /// wallet payments, which are verified on the spot).
+  authority String?  @unique
+  /// DigiPay providerId — our unique purchase id, echoed back on the callback.
+  providerId String?
+  /// Gateway reference number after a successful verify (ZarinPal ref_id /
+  /// DigiPay trackingCode).
+  refId     String?
+  /// The order being paid, when the attempt belongs to one.
+  orderId   String?
+  createdAt DateTime @default(now())
+}
+
+/// Admin-defined delivery method (روش ارسال) selectable at checkout.
+model ShippingMethod {
+  id String @id @default(cuid())
+  name String
+  /// Short explanation shown under the method at checkout.
+  description String @default("")
+  /// حداقل زمان ارسال — روز.
+  minDeliveryDays Int @default(1)
+  /// حداقل هزینه ارسال — تومان.
+  minShippingCost Int @default(0)
+  /// هزینه ارسال در فاکتور محاسبه می‌شود؛ false = پس‌کرایه (هزینه هنگام
+  /// تحویل از مشتری گرفته می‌شود و در فاکتور نمی‌آید).
+  isInvoiced Boolean @default(true)
+  /// Inactive methods stay in the admin list but disappear from checkout.
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+/// Admin-created discount code applied by the customer at checkout.
+model Coupon {
+  id        String    @id @default(cuid())
+  /// The code the customer types, e.g. 'WELCOME10'.
+  code      String    @unique
+  /// 'percent' | 'fixed'
+  type      String
+  /// Percent (0–100) for percent coupons, Toman for fixed ones.
+  value     Int
+  isActive  Boolean   @default(true)
+  /// Null = no expiry.
+  expiresAt DateTime?
+  /// Null = unlimited uses.
+  maxUses   Int?
+  usedCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  /// Purchase floor in Toman — the coupon only applies above this (null = none).
+  minPurchaseAmount Int?
+  /// The single product the coupon is restricted to (null = any product).
+  productId String?
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  /// The product whose prior purchase makes the coupon eligible — the
+  /// purchased-product window below applies to this product.
+  purchasedProductId String?
+  purchasedProduct   Product? @relation("CouponPurchasedProduct", fields: [purchasedProductId], references: [id], onDelete: SetNull)
+  /// Eligibility window: only customers who already purchased the product
+  /// above between purchasedFrom/purchasedTo (null = no window).
+  purchasedFrom DateTime?
+  purchasedTo   DateTime?
+  /// Assigned to one customer (null = public coupon).
+  userId   String?
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Category restriction (null = any category).
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  /// 'gt' | 'lt' | 'eq' — the customer's total past paid purchases must
+  /// compare true against purchaseTotalAmount for the coupon to apply.
+  purchaseTotalOperator String?
+  /// Threshold in Toman for purchaseTotalOperator (null = rule inactive).
+  purchaseTotalAmount   Int?
+  /// Redemptions — one row per customer per coupon (single use each).
+  redemptions CouponRedemption[]
+
+  @@index([code])
+}
+
+/// One burned (used) coupon-code redemption by a customer — the
+/// single-use-per-customer rule's ledger.
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@unique([couponId, userId])
+}
+
+/// History of batch price updates — one row per product/variant whose price
+/// actually moved in a batch. Sold invoices are NEVER rewritten: Order.itemsJson
+/// snapshots each line's unitPrice at order time, so accounting is safe by
+/// construction; this table is the audit trail of what the admin changed and
+/// when. variantId carries no FK on purpose — editing a product replaces its
+/// variant rows, and the history must survive that churn.
+model PriceChange {
+  id        String   @id @default(cuid())
+  /// Every product changed by one admin action shares the batch id.
+  batchId   String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// The variant whose explicit price changed — null = the product's own price.
+  variantId String?
+  /// Display label of the variant («رنگ: آبی») — kept denormalised because
+  /// variant rows are deleted and recreated on product edits.
+  variantName String?
+  oldPrice  Int
+  newPrice  Int
+  /// 'category' | 'product' — what the admin targeted with the batch.
+  scope     String
+  /// Persian label of the target (group/category/product name) — readable
+  /// even after the target itself is deleted.
+  targetName String
+  /// 'fixed' (Toman added) | 'percent' (percent of price added).
+  adjustType String
+  /// Toman for 'fixed', percent for 'percent' — as requested, can be negative.
+  adjustValue Int
+  /// Display name of the admin who applied the batch.
+  actorName String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([productId])
+}
+
+/// One support conversation (تیکت پشتیبانی) — the customer sees it as a chat
+/// in the storefront and in /account/support, the supporter answers it from
+/// the panel (/support). A guest ticket has userId = null and is identified by
+/// an opaque capability token kept in an httpOnly cookie — the same pattern as
+/// Order.paymentToken. Guest name/phone are captured BEFORE the first message,
+/// per the requirement that a guest must identify themselves to chat.
+model SupportTicket {
+  id        String @id @default(cuid())
+  /// Human-facing id shown to both sides, e.g. 'TK-4821'.
+  displayId String @unique
+  /// Null for a guest conversation.
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Guest identity — captured up front so the supporter knows who is asking.
+  guestName  String?
+  guestPhone String?
+  /// Value of the mnt_support cookie in the guest's browser.
+  guestToken String? @unique
+  /// Ticket subject (موضوع) — for a guest it is derived from the first message.
+  subject   String
+  /// 'open' (waiting for the supporter) | 'answered' | 'closed'
+  status    String  @default("open")
+  /// Drives the panel list order without joining messages.
+  lastMessageAt DateTime @default(now())
+  /// 'customer' | 'staff' — «customer» means the requester side (customer OR
+  /// guest). Unread is derived from timestamps rather than a counter, which
+  /// could drift from reality: a new requester message ⟺ lastMessageAt >
+  /// staffReadAt, and vice versa for the customer's badge.
+  lastMessageAuthor String   @default("customer")
+  customerReadAt    DateTime?
+  staffReadAt       DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([lastMessageAt])
+}
+
+/// One chat message inside a SupportTicket.
+model SupportMessage {
+  id       String        @id @default(cuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  /// 'customer' | 'staff' — the requester side vs. the supporter.
+  authorType String
+  /// Denormalised display name: staff get renamed and deleted, and the thread
+  /// must stay readable afterwards.
+  authorName String
+  /// Null for a guest's message (no user row behind it).
+  authorId   String?
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}

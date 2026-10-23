@@ -1,0 +1,170 @@
+/*
+ * BeautyShop — آرایشی و بهداشتی: soft, rounded, elegant.
+ * Palette colors arrive through the shared --theme-* variables; this module
+ * only adds the theme's distinctive pieces (hero band, magazine cards,
+ * newsletter panel, pastel footer).
+ */
+
+/* Light, airy header on the page background. */
+.headerBar {
+  background: color-mix(in srgb, var(--theme-bg) 85%, #fff);
+  color: var(--theme-text);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-primary) 20%, transparent);
+}
+
+/* Hero band: the theme's signature gradient with a soft radius. */
+.hero {
+  border-radius: 24px;
+  padding: 56px 24px;
+  margin-block: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(120deg, var(--theme-primary), var(--theme-secondary));
+  color: #fff;
+}
+
+.heroTag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, #fff 25%, transparent);
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+
+.heroTitle {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.heroText {
+  font-size: 15px;
+  opacity: 0.92;
+  max-width: 480px;
+  line-height: 1.9;
+}
+
+.heroCta {
+  text-decoration: none;
+  background: var(--theme-accent);
+  color: var(--theme-text);
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 999px;
+  padding: 10px 28px;
+  margin-top: 4px;
+}
+
+.heroCta:hover {
+  filter: brightness(1.05);
+}
+
+/* Decorative slider dots (the hero is a single-slide demo). */
+.dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 45%, transparent);
+}
+
+.dotActive {
+  background: #fff;
+}
+
+/* Magazine cards. */
+.postCard {
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+}
+
+.postCover {
+  height: 130px;
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
+}
+
+.postCoverAlt {
+  background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
+}
+
+.postBody {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.postDate {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.postTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.postMore {
+  margin-top: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-primary);
+  text-decoration: none;
+}
+
+/* Newsletter panel. */
+.newsletter {
+  border-radius: 24px;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-bg));
+}
+
+.newsletterInput {
+  width: min(420px, 100%);
+  display: flex;
+  gap: 8px;
+}
+
+/* Pastel footer tinted with the primary color. */
+.footer {
+  background: color-mix(in srgb, var(--theme-primary) 8%, var(--theme-bg));
+  color: var(--theme-text);
+}
+
+.socialRow {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 20px;
+}
+
+.socialChip {
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #fff;
+  background: var(--theme-primary);
+  border-radius: 999px;
+  padding: 6px 14px;
+}

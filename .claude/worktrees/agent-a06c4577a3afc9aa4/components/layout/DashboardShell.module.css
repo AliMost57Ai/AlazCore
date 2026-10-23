@@ -1,0 +1,44 @@
+.brand {
+  min-inline-size: 0;
+}
+
+/* Frosted topbar (alazcore samples): translucent surface + backdrop blur so
+   scrolled content washes under it instead of being cut by a hard edge. */
+.header {
+  background: light-dark(rgb(255 255 255 / 85%), rgb(15 23 42 / 85%));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid light-dark(#e2e8f0, var(--mantine-color-dark-4));
+}
+
+.brandMark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--mantine-radius-md);
+  /* The catalyst gradient tile — volcanic glow in dark (DESIGN.md). */
+  background: linear-gradient(135deg, #ff4815, #ea580c);
+  color: var(--mantine-color-white);
+  box-shadow: 0 0 16px rgb(255 87 34 / 35%);
+}
+
+.brandText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Below ~400px the header has to fit a burger, brand, three icons and the
+   avatar — the wordmark is the piece that can go. */
+@media (max-width: 26em) {
+  .brandText {
+    display: none;
+  }
+}
+
+.navFooter {
+  padding-top: var(--mantine-spacing-sm);
+  border-top: 1px solid var(--mantine-color-default-border);
+}

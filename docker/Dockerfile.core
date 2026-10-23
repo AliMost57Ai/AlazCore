@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Image پنل Core (SuperAdmin) — اپ مستقل core/ — پورت 3100
+#
+# بیلد (از ریشه‌ی ریپو؛ چون DDL پروویژن سایت‌ها از فروشگاه کپی می‌شود):
+#   docker build -f docker/Dockerfile.core -t alazcore-core:1.1.0 .
+# اجرا:
+#   docker compose up -d   (با docker.env — بنگر DOCKER.md)
+#
+# دیتای زمان اجرا (core.db + آپلودهای پنل) داخل image نیست — روی volume خارجی
+# در /app/data سوار می‌شود. علاوه بر آن، volume دیتای فروشگاه در /shop/data
+# سوار می‌شود تا هنگام ثبت دامنه، دیتابیس اختصاصی همان سایت ساخته شود
+# (پروویژن — استثنای قاعده API-only).
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3100 \
+    DB_FILE=core.db \
+    SHOP_APP_ROOT=/shop \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
+    NPM_CONFIG_FETCH_TIMEOUT=600000
+
+WORKDIR /app
+
+# ۱) openssl برای اینکه Prisma نسخه‌ی engine درست (openssl 3.0 دبیان) را تشخیص دهد
+RUN apt-get update -y \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+# ۲) schema پیش از npm ci کپی می‌شود — چون postinstall خودش
+#    `prisma generate` می‌زند و بدون schema شکست می‌خورد
+COPY core/prisma ./prisma
+
+# ۳) نصب وابستگی‌های اپ Core — --include=dev اجباری است: وابستگی‌های dev برای
+#    خودِ بیلد لازم‌اند و بعداً در مرحله سبک‌سازی حذف می‌شوند.
+COPY core/package.json core/package-lock.json ./
+RUN npm ci --include=dev
+
+# ۴) سورس کامل اپ Core
+COPY core/ .
+
+# ۵) DDL اسکیمای فروشگاه + فایل‌های مایگریشن سایت‌ها — Core هنگام پروویژن
+#    دیتابیس هر سایت آن‌ها را می‌خواند (lib/provision.ts مسیر را از
+#    SHOP_APP_ROOT/prisma/... می‌سازد). بعد از هر تغییر schema فروشگاه،
+#    با scripts/new-site-migration.ts تولید و image از نو بیلد شود.
+COPY prisma/site-schema.sql /shop/prisma/site-schema.sql
+COPY prisma/site-migrations /shop/prisma/site-migrations
+
+# ۶) دیتابیس خالی فقط برای مرحله build — آخر بیلد حذف می‌شود
+#    (Prisma 7: فلگ --skip-generate حذف شده؛ generate از db push جدا شده است)
+RUN npx prisma db push
+
+# ۷) بیلد و حذف دیتابیس موقت build
+RUN npm run build && rm -rf data
+
+# ۸) سبک‌سازی: حذف وابستگی‌های dev از node_modules — prisma CLI و tsx (لازمِ
+#    entrypoint) به‌صورت global نصب می‌شوند تا نصب‌شان به‌دست‌کاری node_modules
+#    (prune/reconcile در حالت production) گره نخورد (نسخه‌ها = نسخه‌های lockfile).
+RUN npm prune --omit=dev \
+ && npm install --global prisma@7.10.1 tsx@4.23.15 \
+ && npx prisma generate \
+ && npm cache clean --force
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+# checkout ویندوزی گیت ممکن است entrypoint را با CRLF تحویل دهد و shebang داخل
+# کانتینر بشکند (exec: no such file or directory) — حتماً به LF نرمال شود
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 3100
+ENTRYPOINT ["entrypoint.sh"]

@@ -1,0 +1,73 @@
+/* Loaded after Mantine's stylesheet so these win. */
+
+/* Two-tier canvas (stitch_modern_store_dashboard_ui): the page background is
+   one step deeper than panels — slate-50 #f8fafc in light, Midnight-Flame
+   canvas #090D16 in dark. Cards/Paper keep reading var(--mantine-color-body),
+   which stays white (light) / #0F172A (dark-7), so panels float on the
+   canvas instead of blending into it. */
+body {
+  background: light-dark(#f8fafc, #090d16);
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Thin overlay scrollbar matching the design's recessive chrome. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: light-dark(#cbd5e1, #334155) transparent;
+}
+
+::-webkit-scrollbar {
+  inline-size: 8px;
+  block-size: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: light-dark(#cbd5e1, #334155);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Persian numerals in tabular data (prices, counts, order IDs) stay aligned
+   column-after-column — the dashboard samples set this on every metric. */
+.tnum,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Latin identifiers, emails and codes inside RTL text: keep them LTR so
+   punctuation doesn't jump to the wrong end of the string. */
+[dir='rtl'] code,
+[dir='rtl'] kbd,
+[dir='rtl'] samp {
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* Never trap a mobile reader at one zoom level — the template's original
+   viewport tag set user-scalable=no, which this replaces. */
+@media (max-width: 48em) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--mantine-color-brand-filled);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

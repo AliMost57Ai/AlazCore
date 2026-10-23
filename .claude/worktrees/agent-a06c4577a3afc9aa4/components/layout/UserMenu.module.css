@@ -1,0 +1,29 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  padding: 4px;
+  padding-inline-end: var(--mantine-spacing-xs);
+  border-radius: var(--mantine-radius-xl);
+  color: inherit;
+}
+
+.trigger:hover {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--mantine-color-brand-filled);
+  outline-offset: 2px;
+}
+
+.identity {
+  /* Long Persian names truncate instead of pushing the chevron off-screen. */
+  min-inline-size: 0;
+  max-inline-size: 140px;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--mantine-color-dimmed);
+}

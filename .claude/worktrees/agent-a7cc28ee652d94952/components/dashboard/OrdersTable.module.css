@@ -1,0 +1,16 @@
+.table {
+  white-space: nowrap;
+}
+
+/* Column headers sit on a recessive slate wash (alazcore tables):
+   bg-slate-50/80, slate-500 ink, bold. */
+.table thead th {
+  background: light-dark(rgb(248 250 252 / 80%), var(--mantine-color-dark-6));
+  color: light-dark(#64748b, #94a3b8);
+  font-weight: 700;
+}
+
+/* Columns of numbers align only with tabular figures. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+}

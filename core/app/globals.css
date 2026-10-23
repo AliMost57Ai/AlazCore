@@ -1,0 +1,45 @@
+:root {
+  /* گرادیان شعله لوگو — هدر و کانتینر ورود */
+  --core-flame: linear-gradient(120deg, #fb7401 0%, #f43f01 45%, #7c000c 100%);
+  /* کانواس سرمه‌ای دودی لوگو */
+  --core-midnight: #1b2a34;
+}
+
+body {
+  font-family: Vazirmatn, Tahoma, system-ui, sans-serif;
+}
+
+/* لوگوی سربرگ پنل — ارتفاع یکنواخت در header */
+.core-logo {
+  height: 36px;
+  width: auto;
+  border-radius: 8px;
+}
+
+/* کارت ورود با هاله شعله‌ای برند */
+.login-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: var(--core-flame);
+  opacity: 0.08;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.mantine-dark .login-card::before {
+  opacity: 0.16;
+}
+
+/* گرادیان متنی برای عنوان‌های برند */
+.brand-gradient-text {
+  background: var(--core-flame);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

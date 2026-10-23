@@ -1,0 +1,130 @@
+/*
+ * DigiMarket — لوازم جانبی موبایل: dark, technical, bold.
+ * The header and footer sit on the dark primary color; the smart-deal banner
+ * leans on the accent yellow. Shared layout comes from theme-shared.module.css.
+ */
+
+/* Dark slate header with the secondary blue as the brand mark. */
+.headerBar {
+  background: var(--theme-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Smart-deal banner: accent background, dark text, bold typography. */
+.deal {
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-block: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: linear-gradient(
+    100deg,
+    var(--theme-accent),
+    color-mix(in srgb, var(--theme-accent) 60%, var(--theme-secondary))
+  );
+  color: var(--theme-text);
+}
+
+.dealTitle {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.dealText {
+  font-size: 14px;
+  margin: 6px 0 0;
+  opacity: 0.85;
+}
+
+.dealCta {
+  text-decoration: none;
+  background: var(--theme-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 10px;
+  padding: 10px 22px;
+  white-space: nowrap;
+}
+
+/* Category grid tiles. */
+.categoryTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 14%, transparent);
+  border-radius: 14px;
+  padding: 18px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.categoryTile:hover {
+  border-color: var(--theme-secondary);
+  transform: translateY(-2px);
+}
+
+.categoryIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-secondary) 14%, transparent);
+  color: var(--theme-secondary);
+}
+
+/* Live product count under the tile label (Batch L real data). */
+.categoryCount {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+/* Brand carousel: horizontal scroller of brand chips. */
+.brandScroller {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-block: 4px 12px;
+}
+
+.brandChip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 14%, transparent);
+  border-radius: 12px;
+  padding: 10px 20px;
+}
+
+.brandDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--theme-secondary);
+}
+
+/* Dark technical footer. */
+.footer {
+  background: var(--theme-primary);
+  color: #fff;
+}

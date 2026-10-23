@@ -1,0 +1,89 @@
+/* Shop landing — same visual language as the login page's brand panel. */
+
+.page {
+  min-block-size: 100dvh;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  padding-block: var(--mantine-spacing-md);
+  padding-inline: var(--mantine-spacing-md);
+  padding-block-end: var(--mantine-spacing-xl);
+}
+
+.wrap {
+  max-inline-size: 1120px;
+  margin-inline: auto;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+  padding: calc(var(--mantine-spacing-xl) * 1.25);
+  border-radius: var(--mantine-radius-lg);
+  background:
+    radial-gradient(circle at 100% 0%, rgb(255 255 255 / 18%), transparent 55%),
+    linear-gradient(160deg, var(--mantine-color-brand-7), var(--mantine-color-brand-9));
+  color: var(--mantine-color-white);
+  margin-block-end: var(--mantine-spacing-xl);
+}
+
+@media (min-width: 48em) {
+  .hero {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.heroTitle {
+  font-size: var(--mantine-font-size-xl);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+@media (min-width: 48em) {
+  .heroTitle {
+    font-size: calc(var(--mantine-font-size-xl) * 1.25);
+  }
+}
+
+.heroText {
+  max-inline-size: 46ch;
+  color: rgb(255 255 255 / 78%);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.8;
+}
+
+.searchForm {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+  inline-size: 100%;
+}
+
+@media (min-width: 48em) {
+  .searchForm {
+    inline-size: 320px;
+  }
+}
+
+/* Placeholder tile for products without an image — keeps the grid even. */
+.noImage {
+  display: grid;
+  place-items: center;
+  block-size: 160px;
+  background: var(--mantine-color-gray-1);
+  color: var(--mantine-color-gray-5);
+
+  [data-mantine-color-scheme='dark'] & {
+    background: var(--mantine-color-dark-6);
+    color: var(--mantine-color-dark-3);
+  }
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  gap: var(--mantine-spacing-xs);
+  padding-block: calc(var(--mantine-spacing-xl) * 2);
+  color: var(--mantine-color-dimmed);
+  text-align: center;
+}

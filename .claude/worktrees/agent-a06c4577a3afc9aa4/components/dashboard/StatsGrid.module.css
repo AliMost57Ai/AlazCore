@@ -1,0 +1,33 @@
+.card {
+  block-size: 100%;
+}
+
+.body {
+  min-inline-size: 0;
+}
+
+/* Proportional figures on purpose: tabular-nums makes a large standalone
+   number look loose. Tabular is reserved for aligned columns. The samples
+   set every metric in font-black — 800 is Vazirmatn's heaviest usable cut
+   for display sizes. */
+.value {
+  margin-top: 2px;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.deltaValue {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trend chips: emerald/rose per the alazcore samples, matched to the chart
+   good/bad tokens so numbers and deltas never disagree. */
+.good {
+  color: light-dark(#047857, #34d399);
+}
+
+.bad {
+  color: light-dark(#be123c, #fb7185);
+}

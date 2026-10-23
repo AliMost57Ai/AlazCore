@@ -1,0 +1,248 @@
+// Datasource کاملاً مستقل از فروشگاه — فایل core/data/core.db.
+// پنل Core خودش اپ و دیتابیس جدا دارد و مستقل deploy می‌شود.
+datasource db {
+  provider = "sqlite"
+  // Prisma 7: URL lives in core/prisma.config.ts (CLI) and in
+  // core/lib/prisma-adapter.ts (runtime). Same file: core/data/core.db.
+}
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../lib/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+/// نقش پرسنل پنل Core — هم‌سان مدل Role فروشگاه: نام ماشین در CoreUser.role
+/// ذخیره می‌شود؛ نقش با isAdmin=true دسترسی کامل دارد، بقیه بر اساس
+/// permissions (منوهای کاتالوگ core/lib/nav-permissions.ts). دو نقش سیستمی
+/// superadmin و support با seed ساخته می‌شوند و حذف نمی‌شوند.
+model CoreRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  title       String
+  isAdmin     Boolean  @default(false)
+  /// JSON array از منوهای پنل Core — مثل فروشگاه: bare href = view،
+  /// href:edit / href:add = عملیات نوشتن.
+  permissions String   @default("[]")
+  createdAt   DateTime @default(now())
+  users       CoreUser[]
+}
+
+/// کاربر پنل Core — role نام ماشین نقش از CoreRole است.
+model CoreUser {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  role         String   @default("support")
+  salt         String
+  /// PBKDF2-SHA256(password, salt) as lowercase hex.
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  roleRef      CoreRole? @relation(fields: [role], references: [name], onDelete: Restrict)
+}
+
+/// پلن فروشگاه‌ساز — منوها/محدودیت‌هایی که به دامین‌های تخصیص‌یافته می‌دهد.
+model Plan {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  /// JSON array of admin-panel menu hrefs this plan unlocks in the shop.
+  /// مثل ["/products", "/orders", "/settings/payment"] — '*' یعنی همه‌چیز.
+  menus       String   @default("[]")
+  /// JSON of limits — { maxProducts?: number|null, maxOrdersPerMonth?: number|null }.
+  limits      String   @default("{}")
+  /// فعال بودن پلن برای تخصیص جدید؛ دامین‌های فعالِ فعلی دست‌نخورده می‌مانند.
+  isActive    Boolean  @default(true)
+  /// مدت اعتبار پیش‌فرض تخصیص به روز — null = نامحدود.
+  durationDays Int?
+  /// قیمت ماهانه به تومان — صرفاً نمایشی/مدیریتی.
+  priceMonthly Int     @default(0)
+  createdAt   DateTime @default(now())
+  assignments PlanAssignment[]
+  domains     Domain[]
+}
+
+/// دامین یک سایت فروشگاهی که از فروشگاه‌ساز استفاده می‌کند.
+model Domain {
+
+  /// آخرین تمدید موفق — مبنای شروع شمارش اعتبار در نوار داشبورد مالک.
+  lastRenewalAt DateTime?
+  id          String   @id @default(cuid())
+  /// مثل joghd.ir — بدون پروتکل و www.
+  domain      String   @unique
+  /// مالک سایت.
+  ownerName   String
+  ownerPhone  String   @default("")
+  ownerEmail  String   @default("")
+  /// رابط فنی سایت.
+  techName    String   @default("")
+  techPhone   String   @default("")
+  techEmail   String   @default("")
+  /// پلن فعلی — با PlanAssignment تاریخچه نگه داشته می‌شود.
+  planId      String?
+  plan        Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  /// پایان اعتبار پلن فعلی — null = تا ابطال.
+  planExpiresAt DateTime?
+  /// سایت مجاز به لود شدن است یا نه — فروشگاه موقع اعتبارسنجی این را می‌بیند.
+  isActive    Boolean  @default(true)
+  /// 'active' | 'suspended' — تعلیق دستی توسط پشتیبانی.
+  status      String   @default("active")
+  notes       String   @default("")
+  /// تم فعال این سایت — از Template ها؛ null = تم پیش‌فرض.
+  templateId  String?
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  /// مسیر نسبی دیتابیس اختصاصی سایت (data/sites/{dir}/{dir}.db) — هنگام ثبت
+  /// دامنه ساخته می‌شود؛ rename دامنه این مسیر را تغییر نمی‌دهد.
+  dbName      String?
+  /// 'ready' (ساخته شد) | 'pending' (provision ناموفق — دوباره تلاش شود)
+  dbStatus    String?
+  /// درصد پورسانت آلازکور از فروش این سایت (۰ تا ۱۰۰) — مبنا گزارش درآمد.
+  commissionPercent Int @default(0)
+  /// خالی‌فروشی مجاز — فروش کالای بدون موجودی تا سقف تعیین‌شده.
+  oversellAllowed Boolean @default(false)
+  /// حداکثر تعداد خالی‌فروشی مجاز در کل فروشگاه (همه کالاها).
+  oversellMax Int @default(0)
+  /// تحویل حضوری — خاموش = همه منوها/صفحات/فیلترهای مرتبط در فروشگاه پنهان.
+  inPersonDelivery Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  gateways    GatewayBinding[]
+  smsPanels   SmsBinding[]
+  tickets     Ticket[]
+  assignments PlanAssignment[]
+}
+
+/// تاریخچه تخصیص پلن به دامین — معتبر در یک بازه زمانی خاص.
+model PlanAssignment {
+  id       String    @id @default(cuid())
+  planId   String
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   Domain    @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  startsAt DateTime  @default(now())
+  endsAt   DateTime?
+  createdAt DateTime @default(now())
+}
+
+/// تم/قالب فروشگاهی که مالکان می‌توانند استفاده کنند — کلیدها با ThemeId
+/// فروشگاه هم‌نام‌اند (beautyshop | digimarket | digishop | softkala یا custom-*).
+model Template {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String   @default("")
+  /// غیرفعال = هیچ سایتی با این تم لود نمی‌شود (fallback به پیش‌فرض).
+  isActive    Boolean  @default(true)
+  /// فقط یک ردیف پیش‌فرض — توسط lib تضمین می‌شود.
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  domains     Domain[]
+}
+
+/// درگاه پرداخت تخصیص‌یافته به یک دامین — مشخص می‌کند کدام درگاه برای
+/// کدام دامنه معتبر و فعال است (درگاه اقساطی = kind 'bnpl').
+/// کاتالوگ درگاه‌ها — مدیریت مرکزی فعال/غیرفعال. غیرفعال‌شدن فقط «تخصیص
+/// جدید» را می‌بندد؛ سایت‌هایی که قبلاً گرفته‌اند همچنان استفاده می‌کنند.
+model CoreGateway {
+  id       String  @id
+  /// 'ipg' | 'bnpl'
+  kind     String
+  label    String
+  /// مسیر لوگوی آپلودی نسبت به core/ (data/uploads/…) — nullable.
+  logoPath String?
+  isActive Boolean @default(true)
+  bindings GatewayBinding[]
+}
+
+/// کاتالوگ پنل‌های پیامکی — همان قاعده‌ی درگاه‌ها.
+model CoreSmsPanel {
+  id       String  @id
+  label    String
+  logoPath String?
+  isActive Boolean @default(true)
+  bindings SmsBinding[]
+}
+
+model GatewayBinding {
+  id          String   @id @default(cuid())
+  domainId    String
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  /// شناسه از کاتالوگ (CoreGateway.id)
+  gateway     String
+  /// 'ipg' | 'bnpl' — اقساطی از نوع bnpl.
+  kind        String   @default("ipg")
+  /// برچسب نمایشی (پیش‌فرض از کاتالوگ).
+  label       String   @default("")
+  /// کلیدها خودشان را در پنل فروشگاه وارد می‌کنند؛ اینجا فقط نمای مدیریتی.
+  credentials String   @default("{}")
+  isActive    Boolean  @default(true)
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+  catalog     CoreGateway? @relation(fields: [gateway], references: [id], onDelete: Restrict)
+
+  @@unique([domainId, gateway])
+}
+
+/// پنل پیامکی تخصیص‌یافته به یک دامین.
+model SmsBinding {
+  id          String   @id @default(cuid())
+  domainId    String
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  provider    String
+  label       String   @default("")
+  credentials String   @default("{}")
+  isActive    Boolean  @default(true)
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+  catalog     CoreSmsPanel? @relation(fields: [provider], references: [id], onDelete: Restrict)
+
+  @@unique([domainId, provider])
+}
+
+/// تیکت پشتیبانی بین مالک سایت و پشتیبانان Core — واژه‌نامه مرجع
+/// (open|answered|closed) و قاعده نخوانده مشتق از timestampها.
+model Ticket {
+  id            String   @id @default(cuid())
+  /// شناسه انسانی «TK-#####» — تولید با retry برخورد.
+  displayId     String   @unique
+  subject       String
+  domainId      String?
+  domain        Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  /// 'open' (در انتظار پاسخ) | 'answered' | 'closed' — قفل بسته فقط با اکشن پشتیبان باز می‌شود.
+  status        String   @default("open")
+  requesterName String
+  /// آخرین پیام رشته — مرتب‌سازی لیست‌ها بر همین اساس است.
+  lastMessageAt DateTime @default(now())
+  /// سمت نویسنده آخرین پیام — 'core' | 'tenant'.
+  lastMessageAuthor String @default("tenant")
+  /// آخرین بازدید پشتیبان کور (null = هرگز) — ورودی قاعده نخوانده.
+  coreReadAt    DateTime?
+  /// آخرین بازدید مالک سایت (null = هرگز).
+  tenantReadAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  messages      TicketMessage[]
+
+  @@index([domainId])
+  @@index([status])
+  @@index([lastMessageAt])
+}
+
+/// پیام‌های تیکت — authorSide 'core' (پشتیبان) یا 'tenant' (مالک سایت).
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorSide String
+  authorName String
+  body       String
+  createdAt  DateTime @default(now())
+}
+
+/// تنظیمات پنل Core — کلید API اعتبارسنجی و مشابه.
+model CoreSetting {
+  key   String @id
+  value String
+}

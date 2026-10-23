@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Image اپ فروشگاه AlazCore (اپ ریشه‌ی ریپو) — پورت 3000
+#
+# بیلد (از ریشه‌ی ریپو):
+#   docker build -f docker/Dockerfile.shop -t alazcore-shop:1.1.0 .
+# اجرا:
+#   docker compose up -d   (با docker.env — بنگر DOCKER.md)
+#
+# دیتای زمان اجرا (دیتابیس + آپلودها) داخل image نیست — روی volume خارجی در
+# مسیر /app/data سوار می‌شود (در docker-compose.yml).
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    DB_FILE=app.db \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
+    NPM_CONFIG_FETCH_TIMEOUT=600000
+
+WORKDIR /app
+
+# ۱) openssl برای اینکه Prisma نسخه‌ی engine درست (openssl 3.0 دبیان) را تشخیص دهد
+RUN apt-get update -y \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+# ۲) schema دیتابیس پیش از npm ci کپی می‌شود — چون postinstall خودش
+#    `prisma generate` می‌زند و بدون schema شکست می‌خورد
+COPY prisma ./prisma
+
+# ۳) نصب وابستگی‌ها — لایه جدا؛ فقط با تغییر package/lock دوباره اجرا می‌شود.
+#    --include=dev اجباری است: وابستگی‌های dev (typescript، postcss-preset-mantine و…)
+#    برای خودِ بیلد لازم‌اند و بعداً در مرحله سبک‌سازی حذف می‌شوند.
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev
+
+# ۴) سورس کامل اپ — data/ و node_modules و .env* با .dockerignore حذف شده‌اند
+COPY . .
+
+# ۵) دیتابیس خالی فقط برای خودِ مرحله build (اگر صفحه‌ای موقع prerender دیتابیس
+#    بخواهد) — آخر بیلد حذف می‌شود؛ دیتای واقعی هرگز داخل image نیست.
+#    (Prisma 7: فلگ --skip-generate حذف شده؛ generate از db push جدا شده است)
+RUN npx prisma db push
+
+# ۶) بیلد و سپس حذف دیتابیس موقت build
+RUN npm run build && rm -rf data
+
+# ۷) سبک‌سازی: حذف وابستگی‌های dev از node_modules — به‌جز prisma CLI و tsx
+#    که entrypoint برای db push / seed لازم دارد (نسخه‌ها = نسخه‌های lockfile).
+#    این دو به‌صورت global نصب می‌شوند تا نصب‌شان به‌دست‌کاری node_modules
+#    (prune/reconcile در حالت production) گره نخورد.
+RUN npm prune --omit=dev \
+ && npm install --global prisma@7.10.1 tsx@4.23.13 \
+ && npx prisma generate \
+ && npm cache clean --force
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+# checkout ویندوزی گیت ممکن است entrypoint را با CRLF تحویل دهد و shebang داخل
+# کانتینر بشکند (exec: no such file or directory) — حتماً به LF نرمال شود
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 3000
+ENTRYPOINT ["entrypoint.sh"]

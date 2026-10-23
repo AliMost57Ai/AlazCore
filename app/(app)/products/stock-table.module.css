@@ -1,0 +1,125 @@
+/* جدول خام صفحات موجودی — قاعده دور ۸: در صفحات سروری compoundهای Mantine
+   Table undefined می‌شوند؛ جدول خام با همین ماژول استایل می‌گیرد.
+   هویت جدول‌های پنل (هم‌سان OrdersTable/ProductsTable): سربرگ recessive
+   روشن اسلِیت — هدر تیره #1B2A34 فقط مخصوص سند چاپی ReportDocument است.
+   موبایل جدول نشان نمی‌دهد (کارت‌های .cards جایگزین‌اند)؛ اعداد وضعیت
+   موجودی با نقطه رنگی + وزن/رنگ متن (رنگ هرگز تنها حامل معنا نیست). */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  background: light-dark(rgb(248 250 252 / 80%), var(--mantine-color-dark-6));
+  color: light-dark(#64748b, #94a3b8);
+  font-weight: 700;
+  padding: 10px 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  transition: background 100ms ease;
+}
+
+.table tbody tr:hover {
+  background: light-dark(rgb(248 250 252 / 60%), rgb(255 255 255 / 2%));
+}
+
+/* نام کالا — تنها ستون متنی؛ وزن ۶۰۰ کافی است، بدون strong ردیف‌به‌ردیف. */
+.name {
+  font-weight: 600;
+  min-width: 200px;
+}
+
+.center {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* موجودی بحرانی: منفی = قرمز (ناموجود/کسری واقعی)، کم اما مثبت = نارنجی.
+   نشانگر نقطه‌ای از currentColor رنگ می‌گیرد تا معنا رنگ + شکل + عدد باشد. */
+.negative {
+  color: var(--mantine-color-red-7);
+  font-weight: 700;
+}
+
+.low {
+  color: var(--mantine-color-orange-7);
+  font-weight: 700;
+}
+
+[data-mantine-color-scheme='dark'] .negative {
+  color: var(--mantine-color-red-4);
+}
+
+[data-mantine-color-scheme='dark'] .low {
+  color: var(--mantine-color-orange-4);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+
+/* کسری محاسبه‌شده (نقطه سفارش − موجودی) — عددی که کاربر برای خرید می‌خواهد. */
+.shortfall {
+  font-weight: 700;
+}
+
+/* سقف کالایی ثبت نشده: سقف کل فروشگاه حاکم است — برچسب ثانویه، نه عدد. */
+.capGlobal {
+  color: var(--mantine-color-dimmed);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* موبایل: جدول با .tableHolder در sm+ می‌ماند و کارت‌های .cards جایگزین‌اند. */
+.tableHolder {
+  overflow-x: auto;
+}
+
+@media print {
+  .actions,
+  .cards {
+    display: none !important;
+  }
+
+  :global(.mantine-AppShell-header),
+  :global(.mantine-AppShell-navbar),
+  :global(.mantine-AppShell-footer) {
+    display: none !important;
+  }
+
+  :global(.mantine-AppShell-main) {
+    padding: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .table {
+    font-size: 11px;
+  }
+
+  .table th,
+  .table td {
+    border: 1px solid #94a3b8 !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}

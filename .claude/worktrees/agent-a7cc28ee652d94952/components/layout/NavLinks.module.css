@@ -1,0 +1,136 @@
+/* The nav column: plain top-level rows; an open group's sub-menu drops into
+   one faint bordered box attached under its parent row. */
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  /* Comfortable tap target on mobile. */
+  min-block-size: 44px;
+  padding: 10px var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-md);
+  color: light-dark(#334155, #cbd5e1);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.link:hover {
+  background: light-dark(#f1f5f9, var(--mantine-color-dark-6));
+  color: light-dark(#0f172a, #f8fafc);
+}
+
+/* Active row (alazcore sidebar): soft brand wash plus a 3px catalyst accent
+   bar on the leading edge — border-r-4 in the RTL sample. */
+.link[data-active] {
+  background: light-dark(#ffe8dc, rgb(255 115 71 / 14%));
+  color: light-dark(#0f172a, #f8fafc);
+  font-weight: 700;
+}
+
+.link[data-active]::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 20%;
+  inline-size: 3px;
+  border-radius: 3px;
+  background: var(--mantine-color-brand-filled);
+}
+
+.link[data-active] .icon {
+  color: var(--mantine-color-brand-filled);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--mantine-color-brand-filled);
+  outline-offset: 2px;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+}
+
+/* --- collapsible groups (کالا / مالی / وبسایت / تنظیمات) --- */
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  min-block-size: 44px;
+  width: 100%;
+  padding: 10px var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-md);
+  color: light-dark(#334155, #cbd5e1);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.group-head:hover {
+  background: light-dark(#f1f5f9, var(--mantine-color-dark-6));
+  color: light-dark(#0f172a, #f8fafc);
+}
+
+.group-head[data-active] {
+  color: light-dark(#0f172a, #f8fafc);
+  font-weight: 700;
+}
+
+/* The sub-menu of an open group: ONE faint box with a border and a soft
+   shadow, indented and hugging its parent row — it reads as "these rows
+   belong to that menu" instead of free-floating rows. */
+.group-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 6px;
+  margin-inline-start: 18px;
+  padding: 6px;
+  border-radius: var(--mantine-radius-md);
+  background: light-dark(rgb(15 23 42 / 4%), rgb(248 250 252 / 4%));
+  border: 1px solid light-dark(#e2e8f0, var(--mantine-color-dark-4));
+  box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
+}
+
+/* Sub-items are one level down — slightly smaller than top-level links. */
+.group-children .link {
+  min-block-size: 36px;
+  padding: 6px var(--mantine-spacing-sm);
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* The group chevron sits at the far end of the row (the label's flex:1
+   pushes it there, opposite the text). Collapsed it points back toward the
+   text — the RTL opening direction; rotating the down-chevron 90deg makes
+   it point left. */
+.chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: light-dark(#94a3b8, var(--mantine-color-dark-3));
+  transform: rotate(90deg);
+  transition: transform 150ms ease;
+}
+
+.chevron-open {
+  transform: rotate(0deg);
+}

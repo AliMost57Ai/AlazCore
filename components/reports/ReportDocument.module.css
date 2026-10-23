@@ -1,0 +1,104 @@
+/* سند رسمی گزارش فروشگاه — گرید رسمی و قواعد چاپ */
+
+.grid {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  background: var(--core-midnight, #1b2a34);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px 10px;
+  border: 1px solid #3e525b;
+}
+
+.table td {
+  border: 1px solid var(--mantine-color-default-border);
+  padding: 7px 10px;
+  text-align: center;
+}
+
+.table tbody tr:nth-child(even) td {
+  background: var(--mantine-color-gray-0);
+}
+
+.mantine-dark .table tbody tr:nth-child(even) td {
+  background: rgb(255, 255, 255, 0.03);
+}
+
+.totalCell {
+  background: var(--mantine-color-gray-1);
+  font-weight: 700;
+}
+
+.mantine-dark .totalCell {
+  background: rgb(255, 255, 255, 0.06);
+}
+
+.docHeader {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  background: var(--mantine-color-gray-0);
+}
+
+.mantine-dark .docHeader {
+  background: rgb(255, 255, 255, 0.03);
+}
+
+.docFooter {
+  text-align: left;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  :global(.mantine-AppShell-header),
+  :global(.mantine-AppShell-navbar),
+  :global(.mantine-AppShell-footer) {
+    display: none !important;
+  }
+
+  :global(.mantine-AppShell-main) {
+    padding: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .document {
+    gap: 8px !important;
+  }
+
+  .docTitle {
+    font-size: 16px !important;
+  }
+
+  .table {
+    font-size: 11px;
+  }
+
+  .table th {
+    background: #1b2a34 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .table td,
+  .table th {
+    border: 1px solid #94a3b8 !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}

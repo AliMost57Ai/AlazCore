@@ -1,0 +1,138 @@
+/* Product view — gallery beside the info column, buy box, specs (per the
+   reference design). Logical properties throughout, so RTL mirrors itself. */
+
+.page {
+  min-block-size: 100dvh;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  padding: var(--mantine-spacing-md);
+}
+
+.wrap {
+  max-inline-size: 1120px;
+  margin-inline: auto;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--mantine-spacing-md);
+  align-items: start;
+}
+
+@media (min-width: 60em) {
+  .main {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+
+.gallery {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+}
+
+.mainImage {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-xs);
+}
+
+.thumb {
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
+  line-height: 0;
+  cursor: pointer;
+}
+
+.thumbActive {
+  border-color: var(--mantine-color-brand-filled);
+}
+
+.noImage {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  color: var(--mantine-color-gray-4);
+  background: var(--mantine-color-gray-1);
+
+  [data-mantine-color-scheme='dark'] & {
+    color: var(--mantine-color-dark-3);
+    background: var(--mantine-color-dark-6);
+  }
+}
+
+/* Buy box — the anchored price + CTA panel from the design. */
+.buyBox {
+  position: sticky;
+  inset-block-start: var(--mantine-spacing-md);
+}
+
+@media (max-width: 60em) {
+  .buyBox {
+    position: static;
+  }
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-xs);
+}
+
+.qtyStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+
+.qtyButton {
+  border: 0;
+  padding: 0 var(--mantine-spacing-sm);
+  block-size: 38px;
+  background: transparent;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qtyButton:disabled {
+  color: var(--mantine-color-dimmed);
+  cursor: not-allowed;
+}
+
+.qtyValue {
+  min-inline-size: 44px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.specRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) 2fr;
+  gap: var(--mantine-spacing-sm);
+  padding-block: var(--mantine-spacing-xs);
+  border-block-end: 1px dashed var(--mantine-color-default-border);
+}
+
+.specKey {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+}

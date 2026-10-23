@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# اجرای هم‌زمان فروشگاه + پنل Core
+#
+# راه‌اندازی کامل در DOCKER.md — خلاصه:
+#   1) cp docker.env.example docker.env   و پر کردن سه کلید (AUTH_SECRET و…)
+#   2) docker compose up -d --build
+#   3) فروشگاه: http://localhost:3000   —   پنل Core: http://localhost:3100
+#
+# دیتابیس‌ها و آپلودها روی volumeهای named خارج از containerها هستند و با
+# `docker compose down` از بین نمی‌روند (فقط `down -v` پاکشان می‌کند — مراقب!).
+# ─────────────────────────────────────────────────────────────────────────────
+name: alazcore
+
+services:
+  core:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.core
+    image: alazcore-core:1.0.0
+    container_name: alazcore-core
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    env_file:
+      - docker.env
+    volumes:
+      # دیتابیس پنل Core (core.db) + آپلودهای پنل — پوشه‌ی ویندوزی قابل‌مشاهده
+      - ${DOCKER_DATA_DIR:-D:/AliMost/NextTest/Github/DockerVolume}/Core:/app/data
+      # دیتای فروشگاه، برای پروویژن دیتابیس اختصاصی هر دامنه هنگام ثبت در پنل
+      # (SHOP_APP_ROOT داخل image روی /shop تنظیم شده و site-schema.sql هم
+      # در /shop/prisma/site-schema.sql بیک شده است)
+      - ${DOCKER_DATA_DIR:-D:/AliMost/NextTest/Github/DockerVolume}/Shop:/shop/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  shop:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.shop
+    image: alazcore-shop:1.0.0
+    container_name: alazcore-shop
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - docker.env
+    depends_on:
+      - core
+    volumes:
+      # دیتابیس اصلی فروشگاه (app.db) + دیتابیس/آپلودهای اختصاصی هر سایت
+      # (sites/*) + آپلودهای عمومی (uploads) — پوشه‌ی ویندوزی قابل‌مشاهده
+      - ${DOCKER_DATA_DIR:-D:/AliMost/NextTest/Github/DockerVolume}/Shop:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

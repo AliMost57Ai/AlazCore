@@ -1,0 +1,98 @@
+.page {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-block-size: 100dvh;
+  padding: var(--mantine-spacing-md);
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.controls {
+  position: absolute;
+  /* Logical inset: the toggles sit in the top-leading corner in both directions. */
+  inset-block-start: var(--mantine-spacing-md);
+  inset-inline-end: var(--mantine-spacing-md);
+  z-index: 1;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  inline-size: 100%;
+  max-inline-size: 980px;
+  overflow: hidden;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+/* The brand panel is decoration; below md the form gets the whole card. */
+.aside {
+  display: none;
+}
+
+@media (min-width: 62em) {
+  .layout {
+    grid-template-columns: 0.85fr 1fr;
+  }
+
+  .aside {
+    display: block;
+    padding: var(--mantine-spacing-xl);
+    background:
+      radial-gradient(circle at 100% 0%, rgb(255 255 255 / 18%), transparent 55%),
+      linear-gradient(160deg, var(--mantine-color-brand-7), var(--mantine-color-brand-9));
+  }
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 18%);
+  color: var(--mantine-color-white);
+}
+
+/* On mobile the mark sits on the card, not the gradient, so it needs the
+   brand fill to stay visible. */
+.markCompact {
+  inline-size: 30px;
+  block-size: 30px;
+  background: var(--mantine-color-brand-filled);
+}
+
+.highlightIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--mantine-radius-sm);
+  background: rgb(255 255 255 / 16%);
+  color: var(--mantine-color-white);
+}
+
+.highlightText {
+  color: rgb(255 255 255 / 78%);
+}
+
+.formSide {
+  display: grid;
+  place-items: center;
+  padding: var(--mantine-spacing-lg);
+}
+
+@media (min-width: 48em) {
+  .formSide {
+    padding: calc(var(--mantine-spacing-xl) * 1.5);
+  }
+}
+
+.formCard {
+  inline-size: 100%;
+  max-inline-size: 400px;
+  background: transparent;
+}

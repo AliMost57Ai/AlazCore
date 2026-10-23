@@ -1,0 +1,44 @@
+# این فایل تعیین می‌کند چه چیزهایی به «بافت بیلد» (build context) داکر فرستاده نشود.
+# هر چیزی که اینجا نیست ولی COPY می‌شود وارد image می‌شود — سکرت‌ها و دیتای کاربر
+# هرگز نباید داخل image بروند (دیتای زمان اجرا فقط از طریق volume وارد می‌شود).
+
+# گیت
+.git
+.gitignore
+.gitattributes
+
+# وابستگی‌ها — داخل image از نو با npm ci نصب می‌شوند (نسخه لینوکسی)
+**/node_modules
+
+# خروجی build — داخل image از نو ساخته می‌شود
+**/.next
+**/*.tsbuildinfo
+out
+
+# دیتای زمان اجرا (دیتابیس‌ها + آپلودها) — فقط از طریق volume
+**/data
+
+# سکرت‌ها — فقط در زمان اجرا از docker.env تزریق می‌شوند؛ همه‌ی تنوع‌های
+# .env (مثل .env.development/.env.local و .env.example) هم وارد ایمیج نمی‌شوند
+# تا مقادیر توسعه هرگز به production نبرد.
+**/.env
+**/.env.*
+docker.env
+
+# لاگ‌ها و فایل‌های موقتی/محلی
+**/*.log
+*.stackdump
+p-tmp.html
+shopexp3.txt
+*.zip
+
+# ابزارها و پیکربندی‌های محلی توسعه
+.ai
+.agents
+.claude
+.zcode
+.vscode
+.storybook
+
+# اسناد و خروجی‌های غیرلازم برای بیلد
+AlazCore-Task-Report.xlsx

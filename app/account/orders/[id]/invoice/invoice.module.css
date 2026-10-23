@@ -1,0 +1,72 @@
+/* فاکتور فروش مشتری — سند چاپ‌پذیر با جدول خط‌دار مطابق نمونهٔ مصوب. */
+
+.doc {
+  max-width: 860px;
+  margin-inline: auto;
+}
+
+.header {
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+  padding: 16px 20px;
+  background: var(--mantine-color-white);
+}
+
+.tableWrap {
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  background: var(--mantine-color-white);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.table th {
+  background: var(--mantine-color-gray-0);
+  color: var(--mantine-color-gray-7);
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  text-align: right;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+  text-align: right;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.numCell {
+  text-align: center !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.footerRow td {
+  background: var(--mantine-color-gray-0);
+  font-weight: 700;
+}
+
+@media print {
+  .toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+  }
+
+  .header,
+  .tableWrap {
+    border-color: var(--mantine-color-gray-4);
+  }
+}

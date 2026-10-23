@@ -1,0 +1,72 @@
+/*
+ * SoftKala — سخت‌افزار: clean, GitHub-ish tech look.
+ * Dark near-black primary for header/footer, the blue accent for links and
+ * highlights, compact info-dense sections. Shared layout: theme-shared.module.css.
+ */
+
+/* Clean tech header: white bar, dark brand, blue accent links. */
+.headerBar {
+  background: color-mix(in srgb, var(--theme-primary) 4%, #fff);
+  color: var(--theme-text);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-primary) 16%, transparent);
+}
+
+/* Category feature: two wide cards ("Top cases", "selected GPUs" on demo). */
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--theme-secondary);
+  border-radius: 14px;
+  padding: 26px 24px;
+  min-height: 150px;
+  position: relative;
+  overflow: hidden;
+  transition: filter 0.15s ease;
+}
+
+.featureCard:hover {
+  filter: brightness(1.1);
+}
+
+.featureTag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--theme-accent);
+}
+
+.featureTitle {
+  font-size: 19px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+
+.featureText {
+  font-size: 13px;
+  color: color-mix(in srgb, #fff 75%, transparent);
+  margin: 0;
+  line-height: 1.8;
+  max-width: 320px;
+}
+
+.featureCount {
+  position: absolute;
+  inset-inline-end: 20px;
+  inset-block-start: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: color-mix(in srgb, #fff 14%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* Info-heavy dark footer. */
+.footer {
+  background: var(--theme-primary);
+  color: #fff;
+}

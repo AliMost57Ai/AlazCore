@@ -1,0 +1,656 @@
+/*
+ * DigiShop — دیجی‌شاپ: قرمز پرانرژی روی سفید تمیز.
+ * Tokens follow the DigiShop design system: brand red #EF394E (deep #D31535,
+ * blush #FFF0F2), green tag #059669 (bg #ECFDF5), amber #F59E0B, page bg
+ * #F8F9FB, text #1F2937 / muted #6B7280 / faint #9CA3AF, borders #E5E7EB,
+ * toman #858D9D. Admin-customizable palette slots flow in through the
+ * --theme-* variables ThemeShell sets; fixed neutrals stay literal.
+ */
+
+/* The design's page column: 1380px, roomier than the shared 1240px. */
+.wrap {
+  width: 100%;
+  max-width: 1380px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* --- header: three tiers (red strip / main bar / category bar) ------------- */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 4%);
+}
+
+/* Tier 1 — the deep-red announcement strip. */
+.topStrip {
+  background: color-mix(in srgb, var(--theme-primary) 80%, #400009);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.topStripInner {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topStripNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+/* Tier 2 — brand, search, cart/auth. */
+.mainBar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mainBarInner {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.brandLogo {
+  height: 38px;
+  width: auto;
+}
+
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--theme-primary);
+}
+
+.brandName {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--theme-primary);
+}
+
+.brandTagline {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.searchForm {
+  flex: 1;
+  max-width: 560px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f4fc;
+  border-radius: 12px;
+  padding: 4px 4px 4px 12px;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--theme-text);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: #9ca3af;
+}
+
+.searchButton {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: var(--theme-primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.searchButton:hover {
+  background: color-mix(in srgb, var(--theme-primary) 82%, #400009);
+}
+
+/* Tier 3 — category chips bar. */
+.categoryBar {
+  background: #fff;
+}
+
+.categoryBarInner {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.categoryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--theme-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.categoryLinks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.categoryLink {
+  text-decoration: none;
+  color: #5b4040;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.categoryLink:hover {
+  color: var(--theme-primary);
+  background: #fff0f2;
+}
+
+.categoryLinkActive {
+  color: var(--theme-primary);
+  font-weight: 700;
+  background: #fff0f2;
+}
+
+.shippingNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* --- amazing deals: the red panel ------------------------------------------- */
+
+.dealsPanel {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  flex-wrap: wrap;
+  background: var(--theme-primary);
+  border-radius: 16px;
+  padding: 24px;
+  color: #fff;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 35%, transparent);
+}
+
+.dealsHead {
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 8px;
+}
+
+.dealsIcon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.dealsTitle {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dealsText {
+  font-size: 12px;
+  opacity: 0.85;
+  margin: 0;
+  line-height: 1.8;
+}
+
+.dealsAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  background: #fff;
+  color: var(--theme-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.dealsAll:hover {
+  background: #fff0f2;
+}
+
+.dealsGrid {
+  flex: 1;
+  min-width: 260px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  align-content: center;
+}
+
+/* --- gift finder: «هدیه چی بدم؟!» ------------------------------------------ */
+
+.finderCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 24px;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 4%);
+}
+
+.finderHead {
+  text-align: center;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.finderKicker {
+  color: var(--theme-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.finderTitle {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--theme-text);
+}
+
+.finderText {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.finderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.finderTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.finderTile:hover {
+  background: #f0f4fc;
+}
+
+.finderBubble {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  color: var(--theme-primary);
+  background: #fff0f2;
+  transition: transform 0.15s ease;
+}
+
+.finderTile:hover .finderBubble {
+  transform: scale(1.08);
+}
+
+.finderBubbleAlt {
+  color: var(--theme-text);
+  background: #f0f4fc;
+}
+
+.finderName {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--theme-text);
+}
+
+.finderPill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--theme-secondary);
+  background: #ecfdf5;
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+
+/* --- product cards (DigiShop design spec) ----------------------------------- */
+
+.gridHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.gridTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--theme-text);
+}
+
+.gridTitleBar {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--theme-primary);
+}
+
+.gridCount {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* The DigiShop card: 1:1 image, red discount pill top-left, green tag
+ * top-right, 2-line 13px title, strikethrough + bold price with an 11px
+ * «تومان». */
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 24px rgb(31 41 55 / 12%);
+  transform: translateY(-2px);
+}
+
+.cardMedia {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f4fc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cardDiscount {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--theme-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.cardTag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--theme-secondary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardCat {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.7;
+  color: var(--theme-text);
+  margin: 2px 0 0;
+  min-height: 44px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardPriceRow {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.cardOldPrice {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.cardPrice {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--theme-text);
+}
+
+.cardToman {
+  font-size: 11px;
+  color: #858d9d;
+  margin-inline-start: 3px;
+}
+
+.cardOut {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  background: #f0f4fc;
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+
+/* --- footer: trust row + link grid + copyright ------------------------------- */
+
+.footer {
+  margin-top: auto;
+  background: #fff;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 4%);
+}
+
+.trustRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding-block: 32px 24px;
+}
+
+.trustCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #f0f4fc;
+  border-radius: 12px;
+}
+
+.trustIcon {
+  flex: 0 0 auto;
+  color: var(--theme-primary);
+}
+
+.trustTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+.trustText {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.footerGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 32px;
+  padding-block: 32px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.footerBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.footerHead {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--theme-text);
+}
+
+.footerText {
+  font-size: 13px;
+  line-height: 2;
+  color: #6b7280;
+  margin: 0;
+  text-align: justify;
+}
+
+.footerList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footerLink {
+  text-decoration: none;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.footerLink:hover {
+  color: var(--theme-primary);
+}
+
+/* Trust badges (اینماد / رسانه) uploaded in مشخصات سایت. */
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.badgeLink {
+  display: inline-flex;
+}
+
+.badgeImg {
+  display: block;
+  height: 95px;
+  width: auto;
+  max-width: 85px;
+  object-fit: contain;
+}
+
+.copyBar {
+  border-top: 1px solid #e5e7eb;
+  padding-block: 14px;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+}

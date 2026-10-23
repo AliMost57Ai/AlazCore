@@ -1,0 +1,35 @@
+/*
+ * Chart tokens. Values come from the validated palette: series 1 matches
+ * brand[5] #ff4815 in light and brand[4] #ff7347 in dark (accents stay
+ * luminous on the midnight canvas), and the ink/grid greys are one step off
+ * each surface so they stay recessive. `light-dark()` is provided by
+ * postcss-preset-mantine and keys off Mantine's colour-scheme attribute, so
+ * the dark column is a selected set of steps rather than an automatic flip.
+ */
+.viz {
+  --viz-series-1: light-dark(#f02d00, #ff7347);
+  --viz-series-1-wash: light-dark(rgb(240 45 0 / 12%), rgb(255 115 71 / 16%));
+  --viz-de-emphasis: light-dark(#ffd0b8, #cc2100);
+
+  --viz-surface: light-dark(#fff, #0f172a);
+  --viz-grid: light-dark(#e2e8f0, #1e293b);
+  --viz-axis: light-dark(#cbd5e1, #334155);
+
+  --viz-ink: light-dark(#0f172a, #f8fafc);
+  --viz-ink-secondary: light-dark(#475569, #cbd5e1);
+  --viz-ink-muted: #94a3b8;
+
+  --viz-good: light-dark(#047857, #34d399);
+  --viz-bad: light-dark(#be123c, #fb7185);
+}
+
+/* Screen-reader data table: every chart ships one so values are never
+   locked behind hover or colour alone. */
+.srTable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
