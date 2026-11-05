@@ -10,13 +10,18 @@
 
 | نیازمندی                  | توضیح                                                       |
 | ------------------------- | ----------------------------------------------------------- |
-| Node.js **≥ 20.9**        | Next.js 16 این حداقل را دارد (در `engines` پکیج هم قید شده) |
+| Node.js **≥ 22** (پیشنهاد: `24.11.0` = `.nvmrc`) | `better-sqlite3@13` روی N-API است و باینری همراه پکیج برای همه‌ی نسخه‌های Node ۲۲ به بالا کار می‌کند؛ نسخه‌ی Node دیگر به ABI گره نخورده است |
 | دیتابیس                   | SQLite — فایل `data/app.db`؛ هیچ سرور دیتابیسی لازم نیست    |
 | متغیر محیطی `AUTH_SECRET` | **تنها متغیر اجباری**؛ کلید امضای کوکی نشست                 |
 | پوشه‌ی قابل‌نوشتن `data/` | دیتابیس + عکس‌های آپلودی (`data/uploads/`) اینجا می‌نشینند  |
 
 نکته‌های مهم:
 
+- **اگر پیام `NODE_MODULE_VERSION` دیدی** یعنی `node_modules` هنوز `better-sqlite3@12`
+  دارد (نسخه‌ی قدیمی، مخصوص یک ABI). با `npm install` در ریشه‌ی ریپو و `core/`
+  نسخه‌ی ۱۳ (N-API) نصب می‌شود و دیگر با تغییر نسخه‌ی Node نمی‌شکند؛ `rebuild` و
+  هم‌ترازکردن نسخه‌ی Node لازم نیست. اسکریپت `scripts/check-native.cjs` این را
+  پیش از اجرا با پیام روشن چاپ می‌کند.
 - `DATABASE_URL` در `prisma/schema.prisma` هاردکد شده است
   (`file:../data/app.db`) — یعنی **هیچ تنظیم اتصال دیتابیس لازم نیست.**
 - اگر `AUTH_SECRET` ست نشده باشد یا کمتر از ۱۶ نویسه باشد، سرور در حالت
@@ -32,11 +37,11 @@
 روی سرور اوبونتو/دبیان:
 
 ```bash
-# Node.js 20 از مخزن رسمی NodeSource
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# Node.js 24 از مخزن رسمی NodeSource (همان نسخه‌ی .nvmrc)
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs git nginx
 
-node -v   # باید v20.9 یا بالاتر باشد
+node -v   # باید 24.x باشد — با تغییر نسخه، npm rebuild better-sqlite3 لازم است
 
 # PM2 برای اجرای دائمی (در صورت انتخاب PM2 — بنگر بخش ۶)
 sudo npm i -g pm2

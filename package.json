@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
+    "predev": "node scripts/check-native.cjs",
     "build": "next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",
+    "prestart": "node scripts/check-native.cjs",
     "typecheck": "tsc --noEmit",
     "lint": "npm run eslint && npm run stylelint",
     "eslint": "eslint .",
@@ -43,6 +45,7 @@
     "@prisma/adapter-better-sqlite3": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@tabler/icons-react": "^3.35.0",
+    "better-sqlite3": "^13.0.3",
     "dayjs": "^1.11.19",
     "exceljs": "^4.4.0",
     "jalaali-js": "^2.0.1",
@@ -77,7 +80,7 @@
     "eslint-config-next": "^16.4.2",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
-    "jest": "^30.5.2",
+    "jest": "^25.1.0",
     "jest-environment-jsdom": "^30.2.0",
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "1.18.0",
@@ -91,6 +94,7 @@
   },
   "packageManager": "yarn@4.11.0",
   "overrides": {
+    "better-sqlite3": "^13.0.3",
     "exceljs": {
       "uuid": "^11.1.1"
     }
@@ -103,6 +107,6 @@
     "@prisma/engines@7.10.1": true,
     "prisma@7.10.1": true,
     "unrs-resolver@1.12.2": true,
-    "better-sqlite3@12.11.1": true
+    "better-sqlite3@13.0.3": true
   }
 }

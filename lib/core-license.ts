@@ -77,8 +77,29 @@ const globalForLicense = globalThis as unknown as {
 globalForLicense.coreLicenseCache ??= new Map();
 const cache = globalForLicense.coreLicenseCache;
 
+/**
+ * آدرس/کلید Core با trim — env-fileهایی که روی ویندوز ساخته و روی لینوکس
+ * (Podman/Docker) سوار می‌شوند گاهی `\r` انتهای مقدار دارند؛ بدون trim،
+ * `CORE_FAIL_MODE` با `'closed'` برابر نمی‌شد (سایت بی‌صدا open می‌ماند) و
+ * آدرس Core هم با CR خراب می‌شد.
+ */
+function coreApiUrl(): string {
+  return (process.env.CORE_API_URL ?? '')
+    .trim()
+    .replace(/\/+$/, '');
+}
+
+function coreApiKey(): string {
+  return (process.env.CORE_API_KEY ?? '').trim();
+}
+
+/** حالت خطا؛ فقط مقدار صریح `open` باز می‌گذارد — هر چیز دیگری closed است. */
+export function coreFailMode(): 'open' | 'closed' {
+  return (process.env.CORE_FAIL_MODE ?? 'closed').trim() === 'open' ? 'open' : 'closed';
+}
+
 export function coreConfigured(): boolean {
-  return Boolean(process.env.CORE_API_URL && process.env.CORE_API_KEY);
+  return Boolean(coreApiUrl() && coreApiKey());
 }
 
 /** پاسخ کش‌شده‌ی لایسنس؛ null یعنی «نمی‌دانم» (Core تنظیم نشده/در دسترس نیست). */
@@ -111,11 +132,11 @@ export async function getLicense(
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
-    const response = await fetch(`${process.env.CORE_API_URL!.replace(/\/+$/, '')}/api/validate`, {
+    const response = await fetch(`${coreApiUrl()}/api/validate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-core-key': process.env.CORE_API_KEY!,
+        'x-core-key': coreApiKey(),
       },
       body: JSON.stringify({ domain }),
       signal: controller.signal,
@@ -144,7 +165,7 @@ function failModeValue(domain: string): CoreLicense | null {
   // پیش‌فرض 'closed' — قرارداد محصول: صفحه فقط بعد از تأیید Core لود می‌شود.
   // 'open' حالت اضطراری است و فقط لاگ می‌کند؛ هر دو ۱۵ ثانیه کش منفی می‌شوند.
   const value: CoreLicense | null =
-    (process.env.CORE_FAIL_MODE ?? 'closed') === 'closed'
+    coreFailMode() === 'closed'
       ? {
           ok: false,
           domain,

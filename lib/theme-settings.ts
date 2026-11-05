@@ -23,6 +23,7 @@ import {
   sanitizeSectionIds,
   type SectionPlacements,
 } from './section-placements';
+import { SiteUnavailableError } from './site-db';
 import {
   DEFAULT_THEME_ID,
   HEX_PATTERN,
@@ -310,27 +311,38 @@ const SITE_KEYS: Record<keyof SiteSettings, string> = {
 
 /** All site identity fields, with defaults for anything never configured. */
 export async function getSiteSettings(): Promise<SiteSettings> {
-  await migrateFromAppConfig();
-  const rows = await prisma.siteSetting.findMany({
-    where: { key: { in: Object.values(SITE_KEYS) } },
-  });
-  const values = new Map(rows.map((row) => [row.key, row.value]));
-  const read = (key: keyof SiteSettings): string => values.get(SITE_KEYS[key])?.trim() ?? '';
+  try {
+    await migrateFromAppConfig();
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: Object.values(SITE_KEYS) } },
+    });
+    const values = new Map(rows.map((row) => [row.key, row.value]));
+    const read = (key: keyof SiteSettings): string => values.get(SITE_KEYS[key])?.trim() ?? '';
 
-  return {
-    siteName: read('siteName') || DEFAULT_SITE_SETTINGS.siteName,
-    siteUrl: read('siteUrl'),
-    contactPhone: read('contactPhone'),
-    contactEmail: read('contactEmail'),
-    contactAddress: read('contactAddress'),
-    aboutUs: read('aboutUs'),
-    enamadPath: read('enamadPath'),
-    mediaPath: read('mediaPath'),
-    enamadUrl: read('enamadUrl'),
-    mediaUrl: read('mediaUrl'),
-    logoPath: read('logoPath'),
-    faviconPath: read('faviconPath'),
-  };
+    return {
+      siteName: read('siteName') || DEFAULT_SITE_SETTINGS.siteName,
+      siteUrl: read('siteUrl'),
+      contactPhone: read('contactPhone'),
+      contactEmail: read('contactEmail'),
+      contactAddress: read('contactAddress'),
+      aboutUs: read('aboutUs'),
+      enamadPath: read('enamadPath'),
+      mediaPath: read('mediaPath'),
+      enamadUrl: read('enamadUrl'),
+      mediaUrl: read('mediaUrl'),
+      logoPath: read('logoPath'),
+      faviconPath: read('faviconPath'),
+    };
+  } catch (error) {
+    // دیتابیس اختصاصی این دامنه هنوز provision نشده (دامنه‌ی ثبت‌نشده یا
+    // صفحه‌ی تعلیق) — layout ریشه نباید ۵۰۰ بدهد، وگرنه /site-inactive هرگز
+    // رندر نمی‌شود و پیام «دیتابیس آماده نیست» به کاربر نمی‌رسد. فقط همین
+    // حالت را پیش‌فرض می‌کنیم؛ بقیه‌ی خطاها مثل قبل بالا می‌روند.
+    if (error instanceof SiteUnavailableError) {
+      return DEFAULT_SITE_SETTINGS;
+    }
+    throw error;
+  }
 }
 
 /** Persists the provided fields; empty values clear the stored entry. */

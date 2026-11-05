@@ -110,8 +110,8 @@ openssl rand -base64 32   # خروجی را برای CORE_API_KEY
 | `CORE_AUTH_SECRET` | پنل Core | کلید امضای کوکی نشست پنل — اجباری |
 | `CORE_API_KEY` | هر دو | کلید مشترک API بین فروشگاه و Core — اجباری |
 | `CORE_API_URL` / `SHOP_API_URL` | — | آدرس‌دهی داخل شبکه‌ی Docker — **تغییر ندهید** |
-| `SHOP_DOMAIN` | فروشگاه | معمولاً خالی (دامنه از هدر nginx خوانده می‌شود) |
-| `CORE_FAIL_MODE` | فروشگاه | اگر Core نبود: `open` = باز بماند، `closed` = مسدود |
+| `SHOP_DOMAIN` | فروشگاه | در production **کامنت** — دامنه از هدر Host خوانده می‌شود؛ فقط برای تست محلی روی localhost بازش کنید |
+| `CORE_FAIL_MODE` | فروشگاه | production: `closed` (بدون تأیید Core هیچ سایتی لود نمی‌شود)؛ dev: `open` (فقط وقتی Core در دسترس نیست باز می‌ماند) |
 | `SEED_ON_FIRST_BOOT` | هر دو | بوت اول روی volume خالی، داده‌ی دمو seed شود؟ |
 | `TZ` | هر دو | منطقه زمانی — پیش‌فرض `Asia/Tehran` |
 
@@ -384,6 +384,8 @@ docker compose down && docker compose up -d   # ری‌استارت کامل ا�
 | ورود کار می‌کند ولی بعد از مدتی همه بیرون می‌افتند | `AUTH_SECRET`/`CORE_AUTH_SECRET` بین ری‌استارت‌ها عوض شده (مثلاً هر بار تصادفی ساخته می‌شود) — مقدار ثابت بگذارید |
 | عکس‌های آپلودی 404 می‌دهند | پوشه‌ی `DockerVolume\Shop\uploads` خالی است یا دیتای `data/uploads` منتقل نشده — بخش ۷ |
 | دیتابیس سایت جدید در پنل Core «pending» می‌ماند | mount `Shop` در سرویس core درست نیست یا `prisma/site-schema.sql` قدیمی است — image کور را بعد از تولید دوباره‌ی آن فایل، از نو بیلد کنید و دکمه‌ی تلاش مجدد دامنه را بزنید |
+| سایت مسدود است و صفحه‌ی `/site-inactive` می‌آید | کد کوچک پایین پیام را بخوانید: `domain` = هدر Host به اپ نمی‌رسد، `db` = دیتابیس همان دامنه روی volume نیست، `license:*` = وضعیت دامنه در Core. برای پاسخ دقیق: `curl -H "x-core-key: $CORE_API_KEY" "https://دامنه/api/core/diagnostics?domain=دامنه"` — بخش ۵-۱ در DEPLOY-CORE.md |
+| `was compiled against a different Node.js version … NODE_MODULE_VERSION` (یا لاگین پنل Core با «خطای شبکه») | `node_modules` هنوز `better-sqlite3@12` دارد (وابسته به ABI همان Node). در **ریشه و `core/`**: `npm install` — نسخه‌ی ۱۳ روی N-API است و باینری همراه پکیج روی هر Node ۲۲+ کار می‌کند؛ دیگر `rebuild` یا هم‌ترازکردن Node لازم نیست |
 | ساعت‌ها ۳:۳۰ اختلاف دارند | `TZ` در `docker.env` روی `Asia/Tehran` نیست |
 | `bind: address already in use` روی سرور | پورت‌ها در nginx یا سرویس دیگری اشغال‌اند — mapping را در `docker-compose.yml` عوض کنید |
 

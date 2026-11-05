@@ -405,3 +405,124 @@ home 200؛ reports 200؛ joghd.ir پس از retry → دیتابیس ساخته 
 - [x] اعمال per-product: خط کسری فقط برای کالای با oversellAllowed و
       ظرفیت سقفِ کالا (+ سقف کل دامنه)؛ مهاجرت ستون‌های Product در
       site-db و site-schema.sql تولید مجدد. create=201 با فیلدهای جدید.
+
+## دور بعدی — عیب‌یابی مسدودسازی سایت و پیام دقیق تعلیق (2026-10-31)
+
+**گزارش کاربر**: در production (Podman، دامنه `shop140.ir` که در Core ثبت و
+دیتابیسش ساخته شده) صفحه‌ی «این دامنه در سامانه ثبت نشده است» نمایش داده
+می‌شد — مستقل از مقدار `CORE_FAIL_MODE`. قرارداد تأییدشده‌ی کاربر: `SHOP_DOMAIN`
+و `CORE_FAIL_MODE=open` فقط برای dev/test؛ production: `SHOP_DOMAIN` کامنت و
+`CORE_FAIL_MODE=closed`. `open` فقط یعنی «اگر Core در دسترس نیست باز بمان».
+
+**ریشه**: صفحه‌ی `/site-inactive` دلیل مسدودسازی را از proxy نمی‌گرفت و آن را
+از وضعیت لایسنس حدس می‌زد:
+- لایسنس `null` (دامنه resolve نشده — مثلاً Host به اپ نمی‌رسد — یا open + Core
+  قطع) → کلید `unknown` → پیام «ثبت‌نشده»؛
+- `status='active'` (لایسنس سالم ولی گیت دیتابیس production) → کلید
+  `active` در `REASONS` نبود → fallback به `unknown` → همان پیام.
+یعنی سه علت کاملاً متفاوت (دامنه‌ی resolveنشده، دیتابیس provision‌نشده، Core
+قطع با open) پیام «دامنه ثبت نشده» می‌گرفتند.
+
+**اصلاح**:
+- `lib/site-block.ts` (جدید، خالص): مدل دلیل `domain | db | license` + نگاشت
+  پیام و کد لاتین؛ `license:unverified` (نشد بررسی کرد) از `license:unknown`
+  (Core گفت ثبت نشده) جدا شد.
+- `proxy.ts`: ریدایرکت با `reason`/`status`/`down` + لاگ یک‌باره‌ی
+  `[site-block] domain=… reason=…` (کلید per-domain، سقف ۵۰۰ کلید)؛ API هم
+  `code`/`reason` در بدنه‌ی 503 می‌گیرد.
+- `app/site-inactive/page.tsx`: پیام از دلیل واقعی + کد + راهنمای کوتاه مدیر؛
+  دیگر هیچ حالتی جز `license:unknown` پیام «ثبت‌نشده» نمی‌دهد.
+- `GET /api/core/diagnostics` (جدید، `x-core-key`، خارج از گیت لایسنس):
+  دامنه‌ی resolveشده، پاسخ واقعی Core بدون کش، مسیر/وجود/اندازه‌ی فایل دیتابیس
+  همان دامنه، فهرست دیتابیس‌های موجود و `verdict`+`hint`. عمداً هیچ ماژول
+  Prisma/دیتابیسی import نمی‌کند و کانتکست سایتی نمی‌نشاند.
+- مستندات: `DEPLOY-CORE.md` (کش ۵→۱۵ دقیقه، env درست، بخش ۵-۱ عیب‌یابی)،
+  `docker/DOCKER.md`، `.env.example`، `docker/docker.env.example`؛
+  `docker/docker.env`: `SHOP_DOMAIN` کامنت شد.
+- تست: `lib/site-block.test.ts` — رگرسیون «فقط license:unknown ⇔ ثبت‌نشده» و
+  رفت‌وبرگشت query.
+
+**ایزولاسیون (نیازمندی کاربر)**: کش لایسنس، دلیل مسدودسازی، لاگ و دیتابیس همه
+per-domain؛ مسدودشدن/تعلیق یک دامنه روی بقیه اثر ندارد. مسیر عیب‌یابی هم
+فقط «می‌بیند» و هیچ دیتابیسی باز نمی‌کند.
+
+**QA**: ترمینال این نشست از کار افتاده بود (`pwsh` → `0xC0000142`)؛
+`typecheck`/`jest`/`build` اجرا نشد. پیش از انتشار: `npm run test` و
+`npm run build` روی فروشگاه و `core`، سپس دود روی Podman.
+
+## همان دور — ناسازگاری ABI ماژول بومی SQLite (2026-10-31)
+
+**گزارش کاربر**: (۱) پنل Core بعد از لاگین «خطای شبکه — دوباره تلاش کنید»؛
+(۲) صفحه‌ی اول فروشگاه `PrismaClientKnownRequestError`:
+`better_sqlite3.node was compiled against a different Node.js version using
+NODE_MODULE_VERSION 137. This version of Node.js requires NODE_MODULE_VERSION 147`.
+
+**ریشه (یکی برای هر دو)**: نصب `node_modules` با Node 24.11.0 (`.nvmrc`، ABI 137)
+انجام شده و اپ با Node 26 (ABI 147) اجرا می‌شد. `better-sqlite3@12.11.1` برای
+Node 26 پری‌بیلد ندارد؛ هر دو اپ (فروشگاه و Core) از
+`@prisma/adapter-better-sqlite3` استفاده می‌کنند، پس اولین کوئری می‌شکند. لاگین
+Core هم چون ۵۰۰ غیر-JSON برمی‌گرداند در فرم «خطای شبکه» دیده می‌شد.
+
+**اصلاح**:
+- `scripts/check-native.cjs` + `core/scripts/check-native.cjs` (جدید): پیش از
+  اجرا ماژول را در حافظه باز می‌کند؛ در صورت خطای ABI/بایندینگ پیام فارسی با
+  نسخه‌ی Node، ABI کامپایل‌شده، مقدار `.nvmrc` و دستور راه‌حل چاپ و با کد ۱
+  خارج می‌شود (خطاهای دیگر فقط هشدار).
+- `package.json` هر دو اپ: `predev`/`prestart` → همان چک.
+- `docker/entrypoint.sh`: چک پیش از `next start` (در image سالم بی‌صداست).
+- `core/app/api/auth/login/route.ts`: هر خطای غیرمنتظره به JSON 500 تبدیل
+  می‌شود تا کلاینت به‌جای «خطای شبکه» پیام واقعی/کد وضعیت را نشان دهد.
+- مستندات: `DEPLOY.md` (Node 24.x = `.nvmrc` + الزام `npm rebuild` هنگام تغییر
+  نسخه) و یک ردیف در `docker/DOCKER.md` (اشتباه‌های رایج).
+
+**هنوز انجام نشده**: خودِ rebuild روی سیستم کاربر (ترمینال این نشست خراب بود).
+دستور: `nvm install 24.11.0 && nvm use 24.11.0` سپس در ریشه و `core/`:
+`npm rebuild better-sqlite3` (یا `npm ci` تمیز) و ری‌استارت هر دو اپ.
+
+### بازبینی مستقل (subagent) و اصلاح‌های بعد از آن
+
+- **P1 (مهم)**: `generateMetadata` در layout ریشه هر درخواست `getSiteSettings()`
+  را روی دیتابیس سایت می‌زد؛ در production برای دامنه‌ی بدون دیتابیس
+  `SiteUnavailableError` پرتاب می‌شد و صفحه‌ی `/site-inactive` **قبل از رندر**
+  ۵۰۰ می‌شد — یعنی پیام جدید `db`/`pending` عملاً دیده نمی‌شد. اصلاح:
+  `getSiteSettings()` فقط همین خطا را می‌گیرد و `DEFAULT_SITE_SETTINGS`
+  برمی‌گرداند (بقیه‌ی خطاها بالا می‌روند).
+- **P2**: دلیل `license` از query فقط وقتی پذیرفته می‌شود که با لایسنس همین
+  لحظه تناقض نداشته باشد؛ دلیل `db` هم فقط وقتی که فایل دیتابیس واقعاً نباشد.
+  لینک کهنه/دستی دیگر پیام «ثبت‌نشده» یا «دیتابیس نیست» نمی‌سازد.
+- **P2**: ورود مستقیم به `/site-inactive` با لایسنس سالم → پیام بی‌طرف
+  (`direct`) + دکمه‌ی بازگشت، نه ادعای «دیتابیس نیست».
+- **P2**: `verdict` تازه‌ی `core-error` برای پاسخ نامعتبر Core (403/404/500 یا
+  ۲۰۰ غیر-JSON)؛ قبلاً به‌اشتباه `db-missing`/`ok` می‌شد.
+- **P2 (حریم خصوصی)**: از پاسخ عیب‌یابی `sitesPresent`/`sitesDir`/`cwd` حذف شد
+  و به‌جایش `dirExists` آمد — دیگر فهرست فروشگاه‌های دیگر سرور لو نمی‌رود.
+- **P2/P3 (مستندات)**: «خالی = اعتبارسنجی غیرفعال» و «بدون متغیرها مستقل
+  کار می‌کند» تصحیح شد (در production یعنی مسدود)؛ نمونه‌ی JSON و خط زائد
+  `m.EventQueue` در معماری هم پاک شد.
+
+## همان دور — مهاجرت به better-sqlite3 13 (N-API) برای Node 26 (2026-10-31)
+
+**درخواست کاربر**: نسخه‌ی Node را تغییر نمی‌دهد (v26.12.1، ABI 147)؛ به‌جایش
+وابستگی SQLite باید با Node 26 همخوان شود.
+
+**راه‌حل**: `better-sqlite3@13` اولین نسخه‌ی N-API است (v13.0.0) — باینری
+از پیش ساخته‌شده داخل خود پکیج منتشر می‌شود (`prebuilds/{platform}-{arch}.node`)
+و به ABI گره ندارد؛ روی Node 22/24/26 کار می‌کند. `prebuild-install` و
+`npm rebuild` هم حذف شده‌اند. APIهایی که آداپتر Prisma لازم دارد در v13
+هستند: `prepare().bind().columns()/raw()/reader/run()`, `defaultSafeIntegers`,
+`close` (از سورس v13.0.3 و docs تأیید شد).
+
+**تغییرات**:
+- `package.json` و `core/package.json`: `better-sqlite3: ^13.0.3` به
+  dependencies + `overrides.better-sqlite3 = ^13.0.3` (آداپتر
+  `@prisma/adapter-better-sqlite3@7.10.1` فقط `^12.6.0` می‌خواهد، پس بدون
+  override نسخه‌ی ۱۲ به‌صورت nested نصب می‌شد) + `engines.node = ">=22"` +
+  به‌روزرسانی کلید `allowScripts`.
+- `scripts/check-native.cjs` و نسخه‌ی core: راهنمای خطا از «nvm/rebuild» به
+  «`npm install better-sqlite3@^13.0.3`» تغییر کرد (nvm فقط جایگزین).
+- `DEPLOY.md` و `docker/DOCKER.md`: الزام ABI و rebuild حذف و به N-API/نسخه ۱۳
+  اصلاح شد.
+
+**باقی‌مانده (سمت کاربر)**: چون ترمینال این نشست خراب است، `npm install` در
+ریشه و `core/` اجرا نشده — `package-lock.json` هر دو اپ باید با همان دستور
+بازتولید شود (وگرنه `npm ci` داخل Docker روی lock قدیمی می‌شکند).

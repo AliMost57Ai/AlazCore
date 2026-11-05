@@ -56,4 +56,10 @@ if [ "${DB_FILE}" = "app.db" ] && [ -f "scripts/migrate-site-uploads.ts" ]; then
   npx tsx scripts/migrate-site-uploads.ts
 fi
 
+# بررسی ماژول بومی SQLite پیش از استارت — اگر image با Node دیگری بیلد شده باشد،
+# اینجا پیام روشن (نسخه‌ی Node/ABI + راه‌حل) در لاگ می‌آید نه خطای مبهم Prisma.
+if [ -f scripts/check-native.cjs ]; then
+  node scripts/check-native.cjs
+fi
+
 exec npx next start -p "${PORT:-3000}"

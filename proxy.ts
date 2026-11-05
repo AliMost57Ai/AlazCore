@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { coreAllowedHrefs, getLicense, isBlocking } from '@/lib/core-license';
+import { coreAllowedHrefs, getLicense } from '@/lib/core-license';
 import {
   hasMenuPermission,
   matchingAdminOnlyHref,
@@ -7,6 +7,7 @@ import {
   matchingAssignableHref,
 } from '@/lib/nav-permissions';
 import { SESSION_COOKIE, verifySession } from '@/lib/session';
+import { blockCode, blockForLicense, blockSearchParams, type SiteBlock } from '@/lib/site-block';
 import {
   enterSiteContext,
   isLocalHost,
@@ -46,17 +47,55 @@ function isPublic(pathname: string): boolean {
 }
 
 /**
- * پاسخ گیت fail-closed — صفحه به /site-inactive می‌رود؛ API پاسخ JSON 503
- * می‌گیرد (قرارداد: در production هیچ لودی بدون تأیید کور و دیتابیس دامنه).
+ * پاسخ گیت fail-closed — صفحه به /site-inactive با «دلیل واقعی» می‌رود؛ API
+ * پاسخ JSON 503 می‌گیرد (قرارداد: در production هیچ لودی بدون تأیید کور و
+ * دیتابیس دامنه). انتقال دلیل مهم است: صفحه‌ی تعلیق بدون آن مجبور می‌شد علت را
+ * از وضعیت لایسنس حدس بزند و برای دامنه‌ی ثبت‌شده هم «ثبت‌نشده» نشان می‌داد.
  */
-function inactiveResponse(request: NextRequest, isApi: boolean): NextResponse {
+function inactiveResponse(request: NextRequest, isApi: boolean, block: SiteBlock): NextResponse {
+  const code = blockCode(block);
   if (isApi) {
     return NextResponse.json(
-      { error: 'این دامنه فعال/پیکربندی نیست (SITE_INACTIVE).' },
+      {
+        error: 'این دامنه فعال/پیکربندی نیست (SITE_INACTIVE).',
+        code,
+        reason: block.kind,
+        ...(block.status ? { status: block.status } : {}),
+        ...(block.serviceDown ? { serviceDown: true } : {}),
+      },
       { status: 503 }
     );
   }
-  return NextResponse.redirect(new URL('/site-inactive', request.url));
+  const target = new URL('/site-inactive', request.url);
+  for (const [key, value] of Object.entries(blockSearchParams(block))) {
+    target.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(target);
+}
+
+/**
+ * لاگ یک‌باره‌ی هر (دامنه، دلیل) — بدون آن هر درخواست مسدود یک خط لاگ
+ * می‌ساخت. کلید شامل دامنه است، پس هر سایت مستقل لاگ می‌شود و مسدودشدن یک
+ * دامنه هیچ اثری روی بقیه ندارد. برای عیب‌یابی: `podman logs <shop> | grep site-block`.
+ */
+const loggedBlocks = new Set<string>();
+const LOGGED_BLOCKS_LIMIT = 500;
+
+function warnBlock(domain: string | null, block: SiteBlock, pathname: string): void {
+  const code = blockCode(block);
+  const key = `${domain ?? '(none)'}|${code}`;
+  if (loggedBlocks.has(key)) {
+    return;
+  }
+  loggedBlocks.add(key);
+  // سقف ساده: قدیمی‌ترین کلید حذف می‌شود تا با دامنه‌های زیاد حافظه رشد نکند.
+  if (loggedBlocks.size > LOGGED_BLOCKS_LIMIT) {
+    const oldest = loggedBlocks.values().next().value;
+    if (oldest !== undefined) {
+      loggedBlocks.delete(oldest);
+    }
+  }
+  console.warn(`[site-block] domain=${domain ?? '(none)'} reason=${code} firstPath=${pathname}`);
 }
 
 export async function proxy(request: NextRequest) {
@@ -111,21 +150,28 @@ export async function proxy(request: NextRequest) {
   let license = null as Awaited<ReturnType<typeof getLicense>>;
   if (!isLocalDev && !licenseExempt) {
     license = siteDomain ? await getLicense(siteDomain) : null;
-    if (isBlocking(license)) {
-      return inactiveResponse(request, isApi);
+    const licenseBlock = blockForLicense(license);
+    if (licenseBlock) {
+      warnBlock(siteDomain, licenseBlock, pathname);
+      return inactiveResponse(request, isApi, licenseBlock);
     }
   }
 
   // ── fail-closed دیتابیس — فقط production ────────────────────────────────
   // production بدون دامنه‌ی واقعی (IP/localhost) یا با دامنه‌ای که فایل
   // دیتابیسش provision نشده ⇒ هیچ لودی؛ هرگز دیتابیس اصلی سرو نمی‌شود.
+  // دلیل هر دو حالت به صفحه منتقل می‌شود تا با «دامنه ثبت‌نشده» اشتباه نشود.
   if (isProduction && !isLocalDev && !licenseExempt) {
     if (!siteDomain) {
-      return inactiveResponse(request, isApi);
+      const block: SiteBlock = { kind: 'domain' };
+      warnBlock(null, block, pathname);
+      return inactiveResponse(request, isApi, block);
     }
     const { siteDbFileExists } = await import('@/lib/site-db');
     if (!siteDbFileExists(siteDomain)) {
-      return inactiveResponse(request, isApi);
+      const block: SiteBlock = { kind: 'db' };
+      warnBlock(siteDomain, block, pathname);
+      return inactiveResponse(request, isApi, block);
     }
   }
 

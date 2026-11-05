@@ -7,8 +7,26 @@ interface LoginBody {
   password?: unknown;
 }
 
-/** POST /api/auth/login — ورود کاربر پنل Core (perms نقش در توکن امضا می‌شود). */
+/**
+ * POST /api/auth/login — ورود کاربر پنل Core (perms نقش در توکن امضا می‌شود).
+ *
+ * هر خطای غیرمنتظره‌ی سرور باید بدنه‌ی JSON برگرداند: فرم ورود پاسخ را
+ * `response.json()` می‌خواند و ۵۰۰ بدون JSON (مثلاً ماژول بومی SQLite با ABI
+ * ناسازگار Node) در کلاینت به پیام گمراه‌کننده‌ی «خطای شبکه» تبدیل می‌شد.
+ */
 export async function POST(request: NextRequest) {
+  try {
+    return await handleLogin(request);
+  } catch (error) {
+    console.error('[core-auth] خطای سرور در ورود:', error);
+    return NextResponse.json(
+      { error: 'خطای سرور در ورود — جزئیات در لاگ سرور ثبت شد.' },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleLogin(request: NextRequest): Promise<NextResponse> {
   let body: LoginBody;
   try {
     body = (await request.json()) as LoginBody;
