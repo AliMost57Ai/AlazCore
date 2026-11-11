@@ -16,7 +16,9 @@ import { activeDataDir } from '@/lib/site-db';
 /** ریشه‌ی داده — با کانتکست سایت، data/sites/{دامنه} تا فایل‌های سایت‌ها
  *  قاطی نشوند؛ بدون کانتکست (main db) همان data/. */
 function dataDir(): string {
-  return path.join(process.cwd(), activeDataDir());
+  // ریشه‌ی داده فقط در زمان اجرا مشخص می‌شود و فایل‌هایش جزء بیلد نیستند؛
+  // بدون turbopackIgnore، Turbopack کل پروژه را trace و در خروجی سرور کپی می‌کند.
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), activeDataDir());
 }
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -39,7 +41,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
   // Rebuild and resolve, then verify the result is still inside the data root.
   const relative = segments.map((segment) => decodeURIComponent(segment)).join('/');
   const DATA_DIR = dataDir();
-  const absolute = path.resolve(DATA_DIR, relative);
+  const absolute = path.resolve(/*turbopackIgnore: true*/ DATA_DIR, relative);
 
   const isInsideData =
     absolute === DATA_DIR || (absolute.startsWith(DATA_DIR + path.sep) && !relative.includes('..'));

@@ -223,7 +223,11 @@ export async function GET(request: NextRequest) {
 
   const failMode = coreFailMode();
   const dbRelative = resolvedDomain ? siteDbRelativePath(resolvedDomain) : '';
-  const dbAbsolute = dbRelative ? path.join(process.cwd(), dbRelative) : '';
+  // مسیر دیتابیس فقط در زمان اجرا معنا دارد و جزء ورودی‌های بیلد نیست؛ بدون
+  // turbopackIgnore، Turbopack کل پروژه را trace می‌کند و خروجی استقرار را باد می‌کند.
+  const dbAbsolute = dbRelative
+    ? path.join(/*turbopackIgnore: true*/ process.cwd(), dbRelative)
+    : '';
   const dbExists = dbAbsolute ? existsSync(dbAbsolute) : false;
   let dbSizeBytes: number | null = null;
   if (dbExists) {

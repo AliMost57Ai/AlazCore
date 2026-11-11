@@ -169,8 +169,12 @@ type TicketRow = {
 function toTicketDTO(row: TicketRow, side: SupportAuthorType): SupportTicketDTO {
   const facts = {
     lastMessageAt: row.lastMessageAt,
+    // The column keeps the legacy 'owner' word for the supporter while
+    // SupportAuthorType speaks 'staff' (see prisma/schema.prisma + lib/support-status.ts).
     lastMessageAuthor:
-      row.lastMessageAuthor === 'staff' ? ('staff' as const) : ('customer' as const),
+      row.lastMessageAuthor === 'owner' || row.lastMessageAuthor === 'staff'
+        ? ('staff' as const)
+        : ('customer' as const),
     staffReadAt: row.staffReadAt,
     customerReadAt: row.customerReadAt,
   };
@@ -358,7 +362,7 @@ export async function getTicketForViewer(
         orderBy: { createdAt: 'asc' },
         select: {
           id: true,
-          authorType: true,
+          authorSide: true,
           authorName: true,
           body: true,
           createdAt: true,
@@ -392,7 +396,8 @@ export async function getTicketForViewer(
     closedNote: base.status === 'closed' ? 'این تیکت بسته شده است.' : null,
     messages: row.messages.map((message) => ({
       id: message.id,
-      authorType: message.authorType === 'staff' ? 'staff' : 'customer',
+      authorType:
+        message.authorSide === 'owner' || message.authorSide === 'staff' ? 'staff' : 'customer',
       authorName: message.authorName,
       body: message.body,
       date: faJalaliDateTime(message.createdAt),
@@ -450,9 +455,8 @@ export async function createCustomerTicket(input: {
       lastMessageAuthor: 'customer',
       messages: {
         create: {
-          authorType: 'customer',
+          authorSide: 'customer',
           authorName: input.name,
-          authorId: input.userId,
           body: input.body.trim(),
         },
       },
@@ -500,7 +504,7 @@ export async function createGuestTicket(input: {
       status: 'open',
       lastMessageAuthor: 'customer',
       messages: {
-        create: { authorType: 'customer', authorName: name, authorId: null, body },
+        create: { authorSide: 'customer', authorName: name, body },
       },
     },
     select: { id: true, displayId: true },
@@ -536,12 +540,12 @@ export async function addMessage(
 
   const now = new Date();
   const message = await prisma.$transaction(async (tx) => {
-    const created = await tx.supportMessage.create({
+    const created = await tx.supportTicketMessage.create({
       data: {
         ticketId,
-        authorType: author.type,
+        // Stored the way every existing row is: 'owner' for the supporter.
+        authorSide: author.type === 'staff' ? 'owner' : 'customer',
         authorName: author.name,
-        authorId: author.id,
         body: body.trim(),
       },
       select: { id: true },
@@ -551,7 +555,7 @@ export async function addMessage(
       where: { id: ticketId },
       data: {
         lastMessageAt: now,
-        lastMessageAuthor: author.type,
+        lastMessageAuthor: author.type === 'staff' ? 'owner' : 'customer',
         // The side that just wrote has obviously read everything up to now.
         ...(author.type === 'staff' ? { staffReadAt: now } : { customerReadAt: now }),
         ...(ticket.status === 'closed'

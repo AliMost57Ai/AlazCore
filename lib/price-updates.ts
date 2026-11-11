@@ -13,6 +13,7 @@
  * so client components can share the arithmetic.
  */
 
+import type { Prisma } from './generated/prisma/client';
 import prisma from './db';
 import {
   computeNewPrice,
@@ -262,6 +263,36 @@ export interface PriceChangeBatchDTO {
   changes: PlannedPriceChange[];
 }
 
+type PriceChangeRow = Prisma.PriceChangeGetPayload<{
+  include: { product: { select: { name: true } } };
+}>;
+
+function toPlannedChange(row: PriceChangeRow): PlannedPriceChange {
+  return {
+    productId: row.productId,
+    productName: row.product.name,
+    variantId: row.variantId,
+    variantName: row.variantName,
+    oldPrice: row.oldPrice,
+    newPrice: row.newPrice,
+  };
+}
+
+/** One history block from the rows that share a batchId (already newest-first). */
+function toBatchDTO(batchId: string, rows: PriceChangeRow[]): PriceChangeBatchDTO {
+  const head = rows[0];
+  return {
+    batchId,
+    createdAt: head.createdAt.toISOString(),
+    actorName: head.actorName,
+    scope: head.scope,
+    targetName: head.targetName,
+    adjustType: head.adjustType,
+    adjustValue: head.adjustValue,
+    changes: rows.map(toPlannedChange),
+  };
+}
+
 /** Recent price-update history, newest first, grouped into batches. */
 export async function listPriceChangeBatches(limit = 100): Promise<PriceChangeBatchDTO[]> {
   const rows = await prisma.priceChange.findMany({
@@ -276,35 +307,143 @@ export async function listPriceChangeBatches(limit = 100): Promise<PriceChangeBa
   for (const row of rows) {
     const latest = batches[batches.length - 1];
     if (latest && latest.batchId === row.batchId) {
-      latest.changes.push({
-        productId: row.productId,
-        productName: row.product.name,
-        variantId: row.variantId,
-        variantName: row.variantName,
-        oldPrice: row.oldPrice,
-        newPrice: row.newPrice,
-      });
+      latest.changes.push(toPlannedChange(row));
       continue;
     }
-    batches.push({
-      batchId: row.batchId,
-      createdAt: row.createdAt.toISOString(),
-      actorName: row.actorName,
-      scope: row.scope,
-      targetName: row.targetName,
-      adjustType: row.adjustType,
-      adjustValue: row.adjustValue,
-      changes: [
-        {
-          productId: row.productId,
-          productName: row.product.name,
-          variantId: row.variantId,
-          variantName: row.variantName,
-          oldPrice: row.oldPrice,
-          newPrice: row.newPrice,
-        },
-      ],
-    });
+    batches.push(toBatchDTO(row.batchId, [row]));
   }
   return batches;
+}
+
+/** Batches per page of /price-history — pagination is by batch, not by row. */
+export const PRICE_HISTORY_PAGE_SIZE = 20;
+
+/** GET filters of /price-history, straight from the URL query string. */
+export interface PriceHistoryFilters {
+  /** ISO instant of the first day (local midnight) — the whole day is included. */
+  from?: string;
+  /** ISO instant of the last day (local midnight) — the whole day is included. */
+  to?: string;
+  /** Category id; its descendants are included. Ignored when `productId` is set. */
+  categoryId?: string;
+  /** Single product id — takes precedence over `categoryId`. */
+  productId?: string;
+}
+
+export interface PriceHistoryPage {
+  batches: PriceChangeBatchDTO[];
+  page: number;
+  hasMore: boolean;
+}
+
+/**
+ * Local-day bound of a picker value: «از تاریخ» starts at that day's local
+ * midnight, «تا تاریخ» ends at its 23:59:59.999 — the same boundary semantics
+ * lib/financial-reports.ts uses, so a picked day is included as a whole day.
+ * The picker hands back the ISO instant of that local midnight (pickerValue.ts).
+ */
+function parseDayBound(value: string | undefined, endOfDay: boolean): Date | null {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  } else {
+    date.setHours(0, 0, 0, 0);
+  }
+  return date;
+}
+
+/**
+ * The /price-history audit trail, filtered and paged.
+ *
+ * Filters (all optional, from the URL): «از تاریخ»/«تا تاریخ» as full local
+ * days, a group/category (expanded to its descendants) and a product. A chosen
+ * product wins over the chosen category — that is what the filter bar's hint
+ * promises.
+ *
+ * Paging is per **batch**, not per row: one admin action on 200 products must
+ * not eat a whole page, so each page is PRICE_HISTORY_PAGE_SIZE batches, newest
+ * first, and every batch arrives with all of its price moves.
+ */
+export async function listPriceChangeHistory(
+  filters: PriceHistoryFilters = {},
+  page = 1
+): Promise<PriceHistoryPage> {
+  const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+
+  const where: Prisma.PriceChangeWhereInput = {};
+  const gte = parseDayBound(filters.from, false);
+  const lte = parseDayBound(filters.to, true);
+  if (gte || lte) {
+    const range: Prisma.DateTimeFilter = {};
+    if (gte) {
+      range.gte = gte;
+    }
+    if (lte) {
+      range.lte = lte;
+    }
+    where.createdAt = range;
+  }
+
+  if (filters.productId) {
+    where.productId = filters.productId;
+  } else if (filters.categoryId) {
+    // Group → its sub-categories, any depth (same walk applyPriceUpdate uses).
+    const categoryIds = await descendantCategoryIds(filters.categoryId);
+    const joins = await prisma.productCategory.findMany({
+      where: { categoryId: { in: categoryIds } },
+      select: { productId: true },
+    });
+    where.productId = { in: [...new Set(joins.map((join) => join.productId))] };
+  }
+
+  // Group ids first, so a page boundary never splits one admin action across two
+  // pages. One extra row tells us whether a next page exists.
+  const groups = await prisma.priceChange.groupBy({
+    by: ['batchId'],
+    where,
+    orderBy: [{ _max: { createdAt: 'desc' } }, { batchId: 'asc' }],
+    skip: (safePage - 1) * PRICE_HISTORY_PAGE_SIZE,
+    take: PRICE_HISTORY_PAGE_SIZE + 1,
+    _max: { createdAt: true },
+  });
+
+  const hasMore = groups.length > PRICE_HISTORY_PAGE_SIZE;
+  const batchIds = groups.slice(0, PRICE_HISTORY_PAGE_SIZE).map((group) => group.batchId);
+  if (batchIds.length === 0) {
+    return { batches: [], page: safePage, hasMore: false };
+  }
+
+  // Every row of the chosen batches — the date/product filters were already
+  // applied when the batches were picked, so a batch is shown whole.
+  const rows = await prisma.priceChange.findMany({
+    where: { batchId: { in: batchIds } },
+    include: { product: { select: { name: true } } },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  });
+
+  const rowsByBatch = new Map<string, PriceChangeRow[]>();
+  for (const row of rows) {
+    const list = rowsByBatch.get(row.batchId);
+    if (list) {
+      list.push(row);
+    } else {
+      rowsByBatch.set(row.batchId, [row]);
+    }
+  }
+
+  const batches: PriceChangeBatchDTO[] = [];
+  for (const batchId of batchIds) {
+    const batchRows = rowsByBatch.get(batchId);
+    if (batchRows && batchRows.length > 0) {
+      batches.push(toBatchDTO(batchId, batchRows));
+    }
+  }
+
+  return { batches, page: safePage, hasMore };
 }

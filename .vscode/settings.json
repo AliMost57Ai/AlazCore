@@ -1,14 +1,9 @@
 {
   "claudeCode.disableLoginPrompt": true,
-  "claudeCode.enableNewConversationShortcut": true,    
-"claudeCode.environmentVariables": [
-      { "name": "ANTHROPIC_AUTH_TOKEN", "value": "sk-AJvHtyXpMU1yxSXnpseLNSID270dEGNlHlO5i4irYuMcw4EK" },
-      { "name": "ANTHROPIC_BASE_URL", "value": "https://agentrouter.org" },
-      { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },
-      { "name": "ANTHROPIC_MODEL", "value": "glm-5.3" }
-    ],
+  "claudeCode.enableNewConversationShortcut": true,  
     "claudeCode.preferredLocation": "panel",
     "claudeCode.disableLoginPrompt": true,
     "claudeCode.enableNewConversationShortcut": true,
-    "claudeCode.initialPermissionMode": "acceptEdits"
+    "claudeCode.initialPermissionMode": "acceptEdits",
+    "npm.packageManager": "npm"
 }

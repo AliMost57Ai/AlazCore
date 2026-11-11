@@ -61,6 +61,7 @@ describe('RolesTable', () => {
   it('fills the edit form from the role that was clicked', async () => {
     const { container } = render(
       <RolesTable
+        capabilities={[]}
         roles={[
           role({
             id: 'r2',
@@ -87,13 +88,14 @@ describe('RolesTable', () => {
   });
 
   it('disables deleting a built-in role', () => {
-    const { container } = render(<RolesTable roles={[role()]} />);
+    const { container } = render(<RolesTable roles={[role()]} capabilities={[]} />);
     expect(deleteButton(container, 'support').disabled).toBe(true);
   });
 
   it('disables deleting a role that still has users', () => {
     const { container } = render(
       <RolesTable
+        capabilities={[]}
         roles={[role({ name: 'finance_officer', title: 'کارمند مالی', isBuiltIn: false, userCount: 2 })]}
       />
     );
@@ -103,6 +105,7 @@ describe('RolesTable', () => {
   it('allows deleting a custom role nobody holds', () => {
     const { container } = render(
       <RolesTable
+        capabilities={[]}
         roles={[role({ name: 'finance_officer', title: 'کارمند مالی', isBuiltIn: false, userCount: 0 })]}
       />
     );

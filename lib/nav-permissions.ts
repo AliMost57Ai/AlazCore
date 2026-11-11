@@ -114,6 +114,21 @@ export const ASSIGNABLE_HREFS: string[] = ASSIGNABLE_MENUS.flatMap((group) =>
 );
 
 /**
+ * href → Persian label, for callers that must word a granted page without
+ * importing the React nav (the dashboard welcome a staff member lands on).
+ * Built from the same catalog the /roles page reads so the words cannot drift;
+ * staff pages that are not grantable menu entries are listed explicitly.
+ */
+export const MENU_LABELS: Record<string, string> = {
+  ...Object.fromEntries(
+    ASSIGNABLE_MENUS.flatMap((group) =>
+      group.items.map((item): [string, string] => [item.href, item.label])
+    )
+  ),
+  '/support': 'تیکت‌های پشتیبانی',
+};
+
+/**
  * Capability grants — not pages but feature switches a role may hold, e.g.
  * the right to configure خالی‌فروشی on products. The cap: namespace
  * keeps them out of the menu-view implication in hasMenuPermission. Stored in the same
